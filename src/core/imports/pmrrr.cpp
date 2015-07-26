@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -41,7 +41,7 @@ Estimate EigEstimate
 ( int n, double* d, double* e, double* w, mpi::Comm comm, 
   double lowerBound, double upperBound )
 {
-    DEBUG_ONLY(CallStackEntry cse("herm_tridiag_eig::EigEstimate"))
+    DEBUG_ONLY(CSE cse("herm_tridiag_eig::EigEstimate"))
     Estimate estimate;
     char jobz='C';
     char range='V';
@@ -49,7 +49,7 @@ Estimate EigEstimate
     int highAccuracy=0;
     int nz, offset;
     int ldz=1;
-    std::vector<int> ZSupport(2*n);
+    vector<int> ZSupport(2*n);
     int retval = pmrrr
     ( &jobz, &range, &n, d, e, &lowerBound, &upperBound, &il, &iu, 
       &highAccuracy, comm.comm, &nz, &offset, w, 0, &ldz, ZSupport.data() );
@@ -64,7 +64,7 @@ Estimate EigEstimate
 // Compute all of the eigenvalues
 Info Eig( int n, double* d, double* e, double* w, mpi::Comm comm )
 {
-    DEBUG_ONLY(CallStackEntry cse("herm_tridiag_eig::Eig"))
+    DEBUG_ONLY(CSE cse("herm_tridiag_eig::Eig"))
     Info info;
     char jobz='N';
     char range='A';
@@ -73,7 +73,7 @@ Info Eig( int n, double* d, double* e, double* w, mpi::Comm comm )
     int highAccuracy=0; 
     int nz, offset;
     int ldz=1;
-    std::vector<int> ZSupport(2*n);
+    vector<int> ZSupport(2*n);
     int retval = pmrrr
     ( &jobz, &range, &n, d, e, &vl, &vu, &il, &iu, &highAccuracy, comm.comm,
       &nz, &offset, w, 0, &ldz, ZSupport.data() );
@@ -90,7 +90,7 @@ Info Eig( int n, double* d, double* e, double* w, mpi::Comm comm )
 Info Eig
 ( int n, double* d, double* e, double* w, double* Z, int ldz, mpi::Comm comm )
 {
-    DEBUG_ONLY(CallStackEntry cse("herm_tridiag_eig::Eig"))
+    DEBUG_ONLY(CSE cse("herm_tridiag_eig::Eig"))
     Info info;
     char jobz='V';
     char range='A';
@@ -98,7 +98,7 @@ Info Eig
     int il, iu;
     int highAccuracy=0; 
     int nz, offset;
-    std::vector<int> ZSupport(2*n);
+    vector<int> ZSupport(2*n);
     int retval = pmrrr
     ( &jobz, &range, &n, d, e, &vl, &vu, &il, &iu, &highAccuracy, comm.comm,
       &nz, &offset, w, Z, &ldz, ZSupport.data() );
@@ -116,7 +116,7 @@ Info Eig
 ( int n, double* d, double* e, double* w, mpi::Comm comm, 
   double lowerBound, double upperBound )
 {
-    DEBUG_ONLY(CallStackEntry cse("herm_tridiag_eig::Eig"))
+    DEBUG_ONLY(CSE cse("herm_tridiag_eig::Eig"))
     Info info;
     char jobz='N';
     char range='V';
@@ -124,7 +124,7 @@ Info Eig
     int highAccuracy=0; 
     int nz, offset;
     int ldz=1;
-    std::vector<int> ZSupport(2*n);
+    vector<int> ZSupport(2*n);
     int retval = pmrrr
     ( &jobz, &range, &n, d, e, &lowerBound, &upperBound, &il, &iu, 
       &highAccuracy, comm.comm, &nz, &offset, w, 0, &ldz, ZSupport.data() );
@@ -142,14 +142,14 @@ Info Eig
 ( int n, double* d, double* e, double* w, double* Z, int ldz, mpi::Comm comm, 
   double lowerBound, double upperBound )
 {
-    DEBUG_ONLY(CallStackEntry cse("herm_tridiag_eig::Eig"))
+    DEBUG_ONLY(CSE cse("herm_tridiag_eig::Eig"))
     Info info;
     char jobz='V';
     char range='V';
     int il, iu;
     int highAccuracy=0; 
     int nz, offset;
-    std::vector<int> ZSupport(2*n);
+    vector<int> ZSupport(2*n);
     int retval = pmrrr
     ( &jobz, &range, &n, d, e, &lowerBound, &upperBound, &il, &iu, 
       &highAccuracy, comm.comm, &nz, &offset, w, Z, &ldz, ZSupport.data() );
@@ -167,7 +167,7 @@ Info Eig
 ( int n, double* d, double* e, double* w, mpi::Comm comm, 
   int lowerBound, int upperBound )
 {
-    DEBUG_ONLY(CallStackEntry cse("herm_tridiag_eig::Eig"))
+    DEBUG_ONLY(CSE cse("herm_tridiag_eig::Eig"))
     Info info;
     ++lowerBound;
     ++upperBound;
@@ -177,7 +177,7 @@ Info Eig
     int highAccuracy=0; 
     int nz, offset;
     int ldz=1;
-    std::vector<int> ZSupport(2*n);
+    vector<int> ZSupport(2*n);
     int retval = pmrrr
     ( &jobz, &range, &n, d, e, &vl, &vu, &lowerBound, &upperBound, 
       &highAccuracy, comm.comm, &nz, &offset, w, 0, &ldz, ZSupport.data() );
@@ -196,7 +196,7 @@ Info Eig
 ( int n, double* d, double* e, double* w, double* Z, int ldz, mpi::Comm comm, 
   int lowerBound, int upperBound )
 {
-    DEBUG_ONLY(CallStackEntry cse("herm_tridiag_eig::Eig"))
+    DEBUG_ONLY(CSE cse("herm_tridiag_eig::Eig"))
     Info info;
     ++lowerBound;
     ++upperBound;
@@ -205,7 +205,7 @@ Info Eig
     double vl, vu;
     int highAccuracy=0; 
     int nz, offset;
-    std::vector<int> ZSupport(2*n);
+    vector<int> ZSupport(2*n);
     int retval = pmrrr
     ( &jobz, &range, &n, d, e, &vl, &vu, &lowerBound, &upperBound, 
       &highAccuracy, comm.comm, &nz, &offset, w, Z, &ldz, ZSupport.data() );

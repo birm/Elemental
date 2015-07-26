@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -22,7 +22,7 @@ namespace El {
 template<typename F>
 void Sylvester( Int m, Matrix<F>& W, Matrix<F>& X, SignCtrl<Base<F>> ctrl )
 {
-    DEBUG_ONLY(CallStackEntry cse("Sylvester"))
+    DEBUG_ONLY(CSE cse("Sylvester"))
     Sign( W, ctrl );
     Matrix<F> WTL, WTR,
               WBL, WBR;
@@ -32,7 +32,7 @@ void Sylvester( Int m, Matrix<F>& W, Matrix<F>& X, SignCtrl<Base<F>> ctrl )
     // WTL and WBR should be the positive and negative identity, WBL should be 
     // zero, and WTR should be -2 X
     X = WTR;
-    Scale( -F(1)/F(2), X );
+    X *= -F(1)/F(2);
 
     // TODO: Think of how to probe for checks on other quadrants.
     /*
@@ -51,7 +51,7 @@ void Sylvester
 ( Int m, AbstractDistMatrix<F>& WPre, AbstractDistMatrix<F>& X, 
   SignCtrl<Base<F>> ctrl )
 {
-    DEBUG_ONLY(CallStackEntry cse("Sylvester"))
+    DEBUG_ONLY(CSE cse("Sylvester"))
 
     auto WPtr = ReadProxy<F,MC,MR>( &WPre );
     auto& W = *WPtr;
@@ -66,7 +66,7 @@ void Sylvester
     // WTL and WBR should be the positive and negative identity, WBL should be 
     // zero, and WTR should be -2 X
     Copy( WTR, X );
-    Scale( -F(1)/F(2), X );
+    X *= -F(1)/F(2);
 
     // TODO: Think of how to probe for checks on other quadrants.
     //       Add UpdateDiagonal routine to avoid explicit identity Axpy?
@@ -87,7 +87,7 @@ void Sylvester
   SignCtrl<Base<F>> ctrl )
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Sylvester");
+        CSE cse("Sylvester");
         if( A.Height() != A.Width() )
             LogicError("A must be square");
         if( B.Height() != B.Width() )
@@ -104,8 +104,8 @@ void Sylvester
     ( W, WTL, WTR,
          WBL, WBR, m );
     WTL = A;
-    WBR = B; Scale( F(-1), WBR );
-    WTR = C; Scale( F(-1), WTR );
+    WBR = B; WBR *= -1;
+    WTR = C; WTR *= -1;
     Sylvester( m, W, X, ctrl );
 }
 
@@ -116,7 +116,7 @@ void Sylvester
   SignCtrl<Base<F>> ctrl )
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Sylvester");
+        CSE cse("Sylvester");
         if( A.Height() != A.Width() )
             LogicError("A must be square");
         if( B.Height() != B.Width() )
@@ -135,8 +135,8 @@ void Sylvester
     ( W, WTL, WTR,
          WBL, WBR, m );
     WTL = A;
-    WBR = B; Scale( F(-1), WBR );
-    WTR = C; Scale( F(-1), WTR );
+    WBR = B; WBR *= -1;
+    WTR = C; WTR *= -1;
     Sylvester( m, W, X, ctrl );
 }
 

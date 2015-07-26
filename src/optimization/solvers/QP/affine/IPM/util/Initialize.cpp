@@ -1,0 +1,650 @@
+/*
+   Copyright (c) 2009-2015, Jack Poulson
+   All rights reserved.
+
+   This file is part of Elemental and is under the BSD 2-Clause License, 
+   which can be found in the LICENSE file in the root directory, or at 
+   http://opensource.org/licenses/BSD-2-Clause
+*/
+#include "El.hpp"
+
+#include "../util.hpp"
+
+namespace El {
+namespace qp {
+namespace affine {
+
+//
+// Despite the fact that the CVXOPT documentation [1] suggests a single-stage
+// procedure for initializing (x,y,z,s), a post-processed two-stage procedure 
+// is currently used by the code [2]:
+//
+// 1) Minimize || G x - h ||^2, s.t. A x = b  by solving
+//
+//    | Q A^T G^T | |  x |   | 0 |
+//    | A  0   0  | |  u | = | b |,
+//    | G  0  -I  | | -s |   | h |
+//
+//   where 'u' is an unused dummy variable.
+//
+// 2) Minimize || z ||^2, s.t. A^T y + G^T z + c in range(Q) by solving
+//
+//    | Q A^T G^T | | u |   | -c |
+//    | A  0   0  | | y | = |  0 |,
+//    | G  0  -I  | | z |   |  0 |
+//
+//    where 'u' is an unused dummy variable.
+//
+// 3) Set 
+//
+//      alpha_p := -min(s), and
+//      alpha_d := -min(z).
+//
+//    Then shift s and z according to the rules:
+//
+//      s := ( alpha_p > -sqrt(eps)*Max(1,||s||_2) ? s + (1+alpha_p)e : s )
+//      z := ( alpha_d > -sqrt(eps)*Max(1,||z||_2) ? z + (1+alpha_d)e : z ),
+//
+//    where 'eps' is the machine precision, 'e' is a vector of all ones 
+//    (for more general conic optimization problems, it is the product of 
+//    identity elements from the Jordan algebras whose squares yield the 
+//    relevant cone.
+//
+//    Since the post-processing in step (3) has a large discontinuity as the 
+//    minimum entry approaches sqrt(eps)*Max(1,||q||_2), we also provide
+//    the ability to instead use an entrywise lower clip.
+//
+// [1] L. Vandenberghe
+//     "The CVXOPT linear and quadratic cone program solvers"
+//     <http://www.seas.ucla.edu/~vandenbe/publications/coneprog.pdf>
+//
+// [2] L. Vandenberghe
+//     CVXOPT's source file, "src/python/coneprog.py"
+//     <https://github.com/cvxopt/cvxopt/blob/f3ca94fb997979a54b913f95b816132f7fd44820/src/python/coneprog.py>
+//
+
+template<typename Real>
+void Initialize
+( const Matrix<Real>& Q,
+  const Matrix<Real>& A, 
+  const Matrix<Real>& G,
+  const Matrix<Real>& b,
+  const Matrix<Real>& c,
+  const Matrix<Real>& h,
+        Matrix<Real>& x,
+        Matrix<Real>& y,
+        Matrix<Real>& z,
+        Matrix<Real>& s,
+  bool primalInit, bool dualInit, bool standardShift )
+{
+    DEBUG_ONLY(CSE cse("qp::affine::Initialize"))
+    const Int m = A.Height();
+    const Int n = A.Width();
+    const Int k = G.Height();
+    if( primalInit )
+    {
+        if( x.Height() != n || x.Width() != 1 )
+            LogicError("x was of the wrong size");
+        if( s.Height() != k || s.Width() != 1 )
+            LogicError("s was of the wrong size");
+    }
+    if( dualInit )
+    {
+        if( y.Height() != m || y.Width() != 1 )
+            LogicError("y was of the wrong size");
+        if( z.Height() != k || z.Width() != 1 )
+            LogicError("z was of the wrong size");
+    }
+    if( primalInit && dualInit )
+    {
+        // TODO: Perform a consistency check
+        return;
+    }
+
+    // Form the KKT matrix
+    // ===================
+    Matrix<Real> J, ones;
+    Ones( ones, k, 1 );
+    KKT( Q, A, G, ones, ones, J );
+
+    // Factor the KKT matrix
+    // =====================
+    Matrix<Real> dSub;
+    Matrix<Int> p;
+    LDL( J, dSub, p, false );
+
+    Matrix<Real> rc, rb, rh, rmu, u, d;
+    Zeros( rmu, k, 1 );
+    if( !primalInit )
+    {
+        // Minimize || G x - h ||^2, s.t. A x = b  by solving
+        //
+        //    | Q A^T G^T | |  x |   | 0 |
+        //    | A  0   0  | |  u | = | b |,
+        //    | G  0  -I  | | -s |   | h |
+        //
+        //   where 'u' is an unused dummy variable.
+        Zeros( rc, n, 1 );
+        rb = b;
+        rb *= -1;
+        rh = h;
+        rh *= -1;
+        KKTRHS( rc, rb, rh, rmu, ones, d );
+        ldl::SolveAfter( J, dSub, p, d, false );
+        ExpandCoreSolution( m, n, k, d, x, u, s );
+        s *= -1;
+    }
+    if( !dualInit )
+    {
+        // Minimize || z ||^2, s.t. A^T y + G^T z + c in range(Q) by solving
+        //
+        //    | Q A^T G^T | | u |   | -c |
+        //    | A  0   0  | | y | = |  0 |,
+        //    | G  0  -I  | | z |   |  0 |
+        //
+        //    where 'u' is an unused dummy variable.
+        rc = c;
+        Zeros( rb, m, 1 );
+        Zeros( rh, k, 1 );
+        KKTRHS( rc, rb, rh, rmu, ones, d );
+        ldl::SolveAfter( J, dSub, p, d, false );
+        ExpandCoreSolution( m, n, k, d, u, y, z );
+    }
+
+    const Real epsilon = Epsilon<Real>();
+    const Real sNorm = Nrm2( s );
+    const Real zNorm = Nrm2( z );
+    const Real gammaPrimal = Sqrt(epsilon)*Max(sNorm,Real(1));
+    const Real gammaDual   = Sqrt(epsilon)*Max(zNorm,Real(1));
+    if( standardShift )
+    {
+        // alpha_p := min { alpha : s + alpha*e >= 0 }
+        // -------------------------------------------
+        const auto sMinPair = VectorMin( s );
+        const Real alphaPrimal = -sMinPair.value;
+        if( alphaPrimal >= Real(0) && primalInit )
+            RuntimeError("initialized s was non-positive");
+
+        // alpha_d := min { alpha : z + alpha*e >= 0 }
+        // -------------------------------------------
+        const auto zMinPair = VectorMin( z );
+        const Real alphaDual = -zMinPair.value;
+        if( alphaDual >= Real(0) && dualInit )
+            RuntimeError("initialized z was non-positive");
+
+        if( alphaPrimal >= -gammaPrimal )
+            Shift( s, alphaPrimal+1 );
+        if( alphaDual >= -gammaDual )
+            Shift( z, alphaDual+1 );
+    }
+    else
+    {
+        LowerClip( s, gammaPrimal );
+        LowerClip( z, gammaDual   );
+    }
+}
+
+template<typename Real>
+void Initialize
+( const AbstractDistMatrix<Real>& Q,
+  const AbstractDistMatrix<Real>& A,
+  const AbstractDistMatrix<Real>& G,
+  const AbstractDistMatrix<Real>& b,
+  const AbstractDistMatrix<Real>& c,
+  const AbstractDistMatrix<Real>& h,
+        AbstractDistMatrix<Real>& x,
+        AbstractDistMatrix<Real>& y,
+        AbstractDistMatrix<Real>& z,
+        AbstractDistMatrix<Real>& s,
+  bool primalInit, bool dualInit, bool standardShift )
+{
+    DEBUG_ONLY(CSE cse("qp::affine::Initialize"))
+    const Int m = A.Height();
+    const Int n = A.Width();
+    const Int k = G.Height();
+    const Grid& g = A.Grid();
+    if( primalInit )
+    {
+        if( x.Height() != n || x.Width() != 1 )
+            LogicError("x was of the wrong size");
+        if( s.Height() != k || s.Width() != 1 )
+            LogicError("s was of the wrong size");
+    }
+    if( dualInit )
+    {
+        if( y.Height() != m || y.Width() != 1 )
+            LogicError("y was of the wrong size");
+        if( z.Height() != k || z.Width() != 1 )
+            LogicError("z was of the wrong size");
+    }
+    if( primalInit && dualInit )
+    {
+        // TODO: Perform a consistency check
+        return;
+    }
+
+    // Form the KKT matrix
+    // ===================
+    DistMatrix<Real> J(g), ones(g);
+    Ones( ones, k, 1 );
+    KKT( Q, A, G, ones, ones, J );
+
+    // Factor the KKT matrix
+    // =====================
+    DistMatrix<Real> dSub(g);
+    DistMatrix<Int> p(g);
+    LDL( J, dSub, p, false );
+
+    DistMatrix<Real> rc(g), rb(g), rh(g), rmu(g), d(g), u(g);
+    Zeros( rmu, k, 1 );
+    if( !primalInit )
+    {
+        // Minimize || G x - h ||^2, s.t. A x = b  by solving
+        //
+        //    | Q A^T G^T | |  x |   | 0 |
+        //    | A  0   0  | |  u | = | b |,
+        //    | G  0  -I  | | -s |   | h |
+        //
+        //   where 'u' is an unused dummy variable.
+        Zeros( rc, n, 1 );
+        rb = b;
+        rb *= -1;
+        rh = h;
+        rh *= -1;
+        KKTRHS( rc, rb, rh, rmu, ones, d );
+        ldl::SolveAfter( J, dSub, p, d, false );
+        ExpandCoreSolution( m, n, k, d, x, u, s );
+        s *= -1;
+    }
+    if( !dualInit )
+    {
+        // Minimize || z ||^2, s.t. A^T y + G^T z + c in range(Q) by solving
+        //
+        //    | Q A^T G^T | | u |   | -c |
+        //    | A  0   0  | | y | = |  0 |,
+        //    | G  0  -I  | | z |   |  0 |
+        //
+        //    where 'u' is an unused dummy variable.
+        rc = c;
+        Zeros( rb, m, 1 );
+        Zeros( rh, k, 1 );
+        KKTRHS( rc, rb, rh, rmu, ones, d );
+        ldl::SolveAfter( J, dSub, p, d, false );
+        ExpandCoreSolution( m, n, k, d, u, y, z );
+    }
+
+    const Real epsilon = Epsilon<Real>();
+    const Real sNorm = Nrm2( s );
+    const Real zNorm = Nrm2( z );
+    const Real gammaPrimal = Sqrt(epsilon)*Max(sNorm,Real(1));
+    const Real gammaDual   = Sqrt(epsilon)*Max(zNorm,Real(1));
+    if( standardShift )
+    {
+        // alpha_p := min { alpha : s + alpha*e >= 0 }
+        // -------------------------------------------
+        const auto sMinPair = VectorMin( s );
+        const Real alphaPrimal = -sMinPair.value;
+        if( alphaPrimal >= Real(0) && primalInit )
+            RuntimeError("initialized s was non-positive");
+
+        // alpha_d := min { alpha : z + alpha*e >= 0 }
+        // -------------------------------------------
+        const auto zMinPair = VectorMin( z );
+        const Real alphaDual = -zMinPair.value;
+        if( alphaDual >= Real(0) && dualInit )
+            RuntimeError("initialized z was non-positive");
+
+        if( alphaPrimal >= -gammaPrimal )
+            Shift( s, alphaPrimal+1 );
+        if( alphaDual >= -gammaDual )
+            Shift( z, alphaDual+1 );
+    }
+    else
+    {
+        LowerClip( s, gammaPrimal );
+        LowerClip( z, gammaDual   );
+    }
+}
+
+template<typename Real>
+void Initialize
+( const SparseMatrix<Real>& JStatic,
+  const Matrix<Real>& regTmp,
+  const Matrix<Real>& b,
+  const Matrix<Real>& c,
+  const Matrix<Real>& h,
+        Matrix<Real>& x,
+        Matrix<Real>& y,
+        Matrix<Real>& z,
+        Matrix<Real>& s,
+  const vector<Int>& map,
+  const vector<Int>& invMap, 
+  const ldl::Separator& rootSep,
+  const ldl::NodeInfo& info,
+  bool primalInit, bool dualInit, bool standardShift,
+  const RegQSDCtrl<Real>& qsdCtrl )
+{
+    DEBUG_ONLY(CSE cse("qp::affine::Initialize"))
+    const Int m = b.Height();
+    const Int n = c.Width();
+    const Int k = h.Height();
+    if( primalInit )
+    {
+        if( x.Height() != n || x.Width() != 1 )
+            LogicError("x was of the wrong size");
+        if( s.Height() != k || s.Width() != 1 )
+            LogicError("s was of the wrong size");
+    }
+    if( dualInit )
+    {
+        if( y.Height() != m || y.Width() != 1 )
+            LogicError("y was of the wrong size");
+        if( z.Height() != k || z.Width() != 1 )
+            LogicError("z was of the wrong size");
+    }
+    if( primalInit && dualInit )
+    {
+        // TODO: Perform a consistency check
+        return;
+    }
+
+    // Form the KKT matrix
+    // ===================
+    auto JOrig = JStatic;
+    JOrig.FreezeSparsity();
+    Matrix<Real> ones;
+    Ones( ones, k, 1 );
+    FinishKKT( m, n, ones, ones, JOrig );
+    auto J = JOrig;
+    J.FreezeSparsity();
+    UpdateRealPartOfDiagonal( J, Real(1), regTmp );
+
+    // (Approximately) factor the KKT matrix
+    // =====================================
+    ldl::Front<Real> JFront;
+    JFront.Pull( J, map, info );
+    LDL( info, JFront, LDL_2D );
+
+    // Compute the proposed step from the KKT system
+    // ---------------------------------------------
+    Matrix<Real> rc, rb, rh, rmu, u, d;
+    Zeros( rmu, k, 1 );
+    if( !primalInit )
+    {
+        // Minimize || G x - h ||^2, s.t. A x = b  by solving
+        //
+        //    | Q A^T G^T | |  x |   | 0 |
+        //    | A  0   0  | |  u | = | b |,
+        //    | G  0  -I  | | -s |   | h |
+        //
+        //   where 'u' is an unused dummy variable.
+        Zeros( rc, n, 1 );
+        rb = b;
+        rb *= -1;
+        rh = h;
+        rh *= -1;
+        KKTRHS( rc, rb, rh, rmu, ones, d );
+
+        reg_qsd_ldl::SolveAfter
+        ( JOrig, regTmp, invMap, info, JFront, d, qsdCtrl );
+        ExpandCoreSolution( m, n, k, d, x, u, s );
+        s *= -1;
+    }
+    if( !dualInit )
+    {
+        // Minimize || z ||^2, s.t. A^T y + G^T z + c in range(Q) by solving
+        //
+        //    | Q A^T G^T | | u |   | -c |
+        //    | A  0   0  | | y | = |  0 |,
+        //    | G  0  -I  | | z |   |  0 |
+        //
+        //    where 'u' is an unused dummy variable.
+        rc = c;
+        Zeros( rb, m, 1 );
+        Zeros( rh, k, 1 );
+        KKTRHS( rc, rb, rh, rmu, ones, d );
+
+        reg_qsd_ldl::SolveAfter
+        ( JOrig, regTmp, invMap, info, JFront, d, qsdCtrl );
+        ExpandCoreSolution( m, n, k, d, u, y, z );
+    }
+
+    const Real epsilon = Epsilon<Real>();
+    const Real sNorm = Nrm2( s );
+    const Real zNorm = Nrm2( z );
+    const Real gammaPrimal = Sqrt(epsilon)*Max(sNorm,Real(1));
+    const Real gammaDual   = Sqrt(epsilon)*Max(zNorm,Real(1));
+    if( standardShift )
+    {
+        // alpha_p := min { alpha : s + alpha*e >= 0 }
+        // -------------------------------------------
+        const auto sMinPair = VectorMin( s );
+        const Real alphaPrimal = -sMinPair.value;
+        if( alphaPrimal >= Real(0) && primalInit )
+            RuntimeError("initialized s was non-positive");
+
+        // alpha_d := min { alpha : z + alpha*e >= 0 }
+        // -------------------------------------------
+        const auto zMinPair = VectorMin( z );
+        const Real alphaDual = -zMinPair.value;
+        if( alphaDual >= Real(0) && dualInit )
+            RuntimeError("initialized z was non-positive");
+
+        if( alphaPrimal >= -gammaPrimal )
+            Shift( s, alphaPrimal+1 );
+        if( alphaDual >= -gammaDual )
+            Shift( z, alphaDual+1 );
+    }
+    else
+    {
+        LowerClip( s, gammaPrimal );
+        LowerClip( z, gammaDual   );
+    }
+}
+
+template<typename Real>
+void Initialize
+( const DistSparseMatrix<Real>& JStatic,
+  const DistMultiVec<Real>& regTmp,
+  const DistMultiVec<Real>& b,
+  const DistMultiVec<Real>& c,
+  const DistMultiVec<Real>& h,
+        DistMultiVec<Real>& x,
+        DistMultiVec<Real>& y,
+        DistMultiVec<Real>& z,
+        DistMultiVec<Real>& s,
+  const DistMap& map,
+  const DistMap& invMap, 
+  const ldl::DistSeparator& rootSep,
+  const ldl::DistNodeInfo& info,
+  bool primalInit, bool dualInit, bool standardShift, 
+  const RegQSDCtrl<Real>& qsdCtrl )
+{
+    DEBUG_ONLY(CSE cse("qp::affine::Initialize"))
+    const Int m = b.Height();
+    const Int n = c.Height();
+    const Int k = h.Height();
+    mpi::Comm comm = JStatic.Comm();
+    if( primalInit )
+    {
+        if( x.Height() != n || x.Width() != 1 )
+            LogicError("x was of the wrong size");
+        if( s.Height() != k || s.Width() != 1 )
+            LogicError("s was of the wrong size");
+    }
+    if( dualInit )
+    {
+        if( y.Height() != m || y.Width() != 1 )
+            LogicError("y was of the wrong size");
+        if( z.Height() != k || z.Width() != 1 )
+            LogicError("z was of the wrong size");
+    }
+    if( primalInit && dualInit )
+    {
+        // TODO: Perform a consistency check
+        return;
+    }
+
+    // Form the KKT matrix
+    // ===================
+    DistSparseMatrix<Real> JOrig(comm);
+    JOrig = JStatic;
+    JOrig.FreezeSparsity();
+    JOrig.multMeta = JStatic.multMeta;
+    DistMultiVec<Real> ones(comm);
+    Ones( ones, k, 1 );
+    FinishKKT( m, n, ones, ones, JOrig );
+    auto J = JOrig;
+    J.FreezeSparsity();
+    J.multMeta = JStatic.multMeta;
+    UpdateRealPartOfDiagonal( J, Real(1), regTmp );
+
+    // (Approximately) factor the KKT matrix
+    // =====================================
+    // TODO: Use PullUpdate just on the identity (or avoid it entirely?)
+    ldl::DistFront<Real> JFront;
+    JFront.Pull( J, map, rootSep, info );
+    // TODO: Consider selective inversion
+    LDL( info, JFront, LDL_2D );
+
+    DistMultiVec<Real> rc(comm), rb(comm), rh(comm), rmu(comm), u(comm),
+                       d(comm);
+    Zeros( rmu, k, 1 );
+    if( !primalInit )
+    {
+        // Minimize || G x - h ||^2, s.t. A x = b  by solving
+        //
+        //    | Q A^T G^T | |  x |   | 0 |
+        //    | A  0   0  | |  u | = | b |,
+        //    | G  0  -I  | | -s |   | h |
+        //
+        //   where 'u' is an unused dummy variable.
+        Zeros( rc, n, 1 );
+        rb = b;
+        rb *= -1;
+        rh = h;
+        rh *= -1;
+        KKTRHS( rc, rb, rh, rmu, ones, d );
+
+        reg_qsd_ldl::SolveAfter
+        ( JOrig, regTmp, invMap, info, JFront, d, qsdCtrl );
+        ExpandCoreSolution( m, n, k, d, x, u, s );
+        s *= -1;
+    }
+    if( !dualInit )
+    {
+        // Minimize || z ||^2, s.t. A^T y + G^T z + c in range(Q) by solving
+        //
+        //    | Q A^T G^T | | u |   | -c |
+        //    | A  0   0  | | y | = |  0 |,
+        //    | G  0  -I  | | z |   |  0 |
+        //
+        //    where 'u' is an unused dummy variable.
+        rc = c;
+        Zeros( rb, m, 1 );
+        Zeros( rh, k, 1 );
+        KKTRHS( rc, rb, rh, rmu, ones, d );
+
+        reg_qsd_ldl::SolveAfter
+        ( JOrig, regTmp, invMap, info, JFront, d, qsdCtrl );
+        ExpandCoreSolution( m, n, k, d, u, y, z );
+    }
+
+    const Real epsilon = Epsilon<Real>();
+    const Real sNorm = Nrm2( s );
+    const Real zNorm = Nrm2( z );
+    const Real gammaPrimal = Sqrt(epsilon)*Max(sNorm,Real(1));
+    const Real gammaDual   = Sqrt(epsilon)*Max(zNorm,Real(1));
+    if( standardShift )
+    {
+        // alpha_p := min { alpha : s + alpha*e >= 0 }
+        // -------------------------------------------
+        const auto sMinPair = VectorMin( s );
+        const Real alphaPrimal = -sMinPair.value;
+        if( alphaPrimal >= Real(0) && primalInit )
+            RuntimeError("initialized s was non-positive");
+
+        // alpha_d := min { alpha : z + alpha*e >= 0 }
+        // -------------------------------------------
+        const auto zMinPair = VectorMin( z );
+        const Real alphaDual = -zMinPair.value;
+        if( alphaDual >= Real(0) && dualInit )
+            RuntimeError("initialized z was non-positive");
+
+        if( alphaPrimal >= -gammaPrimal )
+            Shift( s, alphaPrimal+1 );
+        if( alphaDual >= -gammaDual )
+            Shift( z, alphaDual+1 );
+    }
+    else
+    {
+        LowerClip( s, gammaPrimal );
+        LowerClip( z, gammaDual   );
+    }
+}
+
+#define PROTO(Real) \
+  template void Initialize \
+  ( const Matrix<Real>& Q, \
+    const Matrix<Real>& A, \
+    const Matrix<Real>& G, \
+    const Matrix<Real>& b, \
+    const Matrix<Real>& c, \
+    const Matrix<Real>& h, \
+          Matrix<Real>& x, \
+          Matrix<Real>& y, \
+          Matrix<Real>& z, \
+          Matrix<Real>& s, \
+    bool primalInit, bool dualInit, bool standardShift ); \
+  template void Initialize \
+  ( const AbstractDistMatrix<Real>& Q, \
+    const AbstractDistMatrix<Real>& A, \
+    const AbstractDistMatrix<Real>& G, \
+    const AbstractDistMatrix<Real>& b, \
+    const AbstractDistMatrix<Real>& c, \
+    const AbstractDistMatrix<Real>& h, \
+          AbstractDistMatrix<Real>& x, \
+          AbstractDistMatrix<Real>& y, \
+          AbstractDistMatrix<Real>& z, \
+          AbstractDistMatrix<Real>& s, \
+    bool primalInit, bool dualInit, bool standardShift ); \
+  template void Initialize \
+  ( const SparseMatrix<Real>& JStatic, \
+    const Matrix<Real>& regTmp, \
+    const Matrix<Real>& b, \
+    const Matrix<Real>& c, \
+    const Matrix<Real>& h, \
+          Matrix<Real>& x, \
+          Matrix<Real>& y, \
+          Matrix<Real>& z, \
+          Matrix<Real>& s, \
+    const vector<Int>& map, \
+    const vector<Int>& invMap, \
+    const ldl::Separator& rootSep, \
+    const ldl::NodeInfo& info, \
+    bool primalInit, bool dualInit, bool standardShift, \
+    const RegQSDCtrl<Real>& qsdCtrl ); \
+  template void Initialize \
+  ( const DistSparseMatrix<Real>& JStatic, \
+    const DistMultiVec<Real>& regTmp, \
+    const DistMultiVec<Real>& b, \
+    const DistMultiVec<Real>& c, \
+    const DistMultiVec<Real>& h, \
+          DistMultiVec<Real>& x, \
+          DistMultiVec<Real>& y, \
+          DistMultiVec<Real>& z, \
+          DistMultiVec<Real>& s, \
+    const DistMap& map, \
+    const DistMap& invMap, \
+    const ldl::DistSeparator& rootSep, \
+    const ldl::DistNodeInfo& info, \
+    bool primalInit, bool dualInit, bool standardShift, \
+    const RegQSDCtrl<Real>& qsdCtrl );
+
+#define EL_NO_INT_PROTO
+#define EL_NO_COMPLEX_PROTO
+#include "El/macros/Instantiate.h"
+
+} // namespace affine
+} // namespace qp
+} // namespace El

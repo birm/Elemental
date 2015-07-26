@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -22,7 +22,7 @@ namespace El {
 template<typename F>
 void Ricatti( Matrix<F>& W, Matrix<F>& X, SignCtrl<Base<F>> ctrl )
 {
-    DEBUG_ONLY(CallStackEntry cse("Ricatti"))
+    DEBUG_ONLY(CSE cse("Ricatti"))
     Sign( W, ctrl );
     const Int n = W.Height()/2;
     Matrix<F> WTL, WTR,
@@ -32,13 +32,13 @@ void Ricatti( Matrix<F>& W, Matrix<F>& X, SignCtrl<Base<F>> ctrl )
          WBL, WBR, n );
 
     // (ML, MR) = sgn(W) - I
-    UpdateDiagonal( W, F(-1) );
+    ShiftDiagonal( W, F(-1) );
 
     // Solve for X in ML X = -MR
     Matrix<F> ML, MR;
     PartitionRight( W, ML, MR, n );
-    Scale( F(-1), MR );
-    LeastSquares( NORMAL, ML, MR, X );
+    MR *= -1;
+    ls::Overwrite( NORMAL, ML, MR, X );
 }
 
 template<typename F>
@@ -46,7 +46,7 @@ void Ricatti
 ( AbstractDistMatrix<F>& WPre, AbstractDistMatrix<F>& X, 
   SignCtrl<Base<F>> ctrl )
 {
-    DEBUG_ONLY(CallStackEntry cse("Ricatti"))
+    DEBUG_ONLY(CSE cse("Ricatti"))
 
     auto WPtr = ReadProxy<F,MC,MR>( &WPre );
     auto& W = *WPtr;
@@ -61,13 +61,13 @@ void Ricatti
          WBL, WBR, n );
 
     // (ML, MR) = sgn(W) - I
-    UpdateDiagonal( W, F(-1) );
+    ShiftDiagonal( W, F(-1) );
 
     // Solve for X in ML X = -MR
     DistMatrix<F> ML(g), MR(g);
     PartitionRight( W, ML, MR, n );
-    Scale( F(-1), MR );
-    LeastSquares( NORMAL, ML, MR, X );
+    MR *= -1;
+    ls::Overwrite( NORMAL, ML, MR, X );
 }
 
 template<typename F>
@@ -77,7 +77,7 @@ void Ricatti
   SignCtrl<Base<F>> ctrl )
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Sylvester");
+        CSE cse("Sylvester");
         if( A.Height() != A.Width() )
             LogicError("A must be square");
         if( K.Height() != K.Width() )
@@ -96,7 +96,7 @@ void Ricatti
          WBL, WBR, n );
 
     Adjoint( A, WTL );
-    WBR = A; Scale( F(-1), WBR );
+    WBR = A; WBR *= -1;
     WBL = K; MakeHermitian( uplo, WBL );
     WTR = L; MakeHermitian( uplo, WTR );
 
@@ -111,7 +111,7 @@ void Ricatti
   SignCtrl<Base<F>> ctrl )
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Sylvester");
+        CSE cse("Sylvester");
         if( A.Height() != A.Width() )
             LogicError("A must be square");
         if( K.Height() != K.Width() )
@@ -132,7 +132,7 @@ void Ricatti
          WBL, WBR, n );
 
     Adjoint( A, WTL );
-    WBR = A; Scale( F(-1), WBR );
+    WBR = A; WBR *= -1;
     WBL = K; MakeHermitian( uplo, WBL );
     WTR = L; MakeHermitian( uplo, WTR );
 

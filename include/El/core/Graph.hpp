@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson, Lexing Ying,
+   Copyright (c) 2009-2015, Jack Poulson, Lexing Ying,
    The University of Texas at Austin, Stanford University, and the
    Georgia Insitute of Technology.
    All rights reserved.
@@ -16,69 +16,107 @@ namespace El {
 
 // Forward declaration
 class DistGraph;
+template<typename T>
+class SparseMatrix;
+template<typename T>
+class DistSparseMatrix;
 
 class Graph
 {
 public:
     // Constructors and destructors
+    // ============================
     Graph();
-    Graph( int numVertices );
-    Graph( int numSources, int numTargets );
+    Graph( Int numVertices );
+    Graph( Int numSources, Int numTargets );
     Graph( const Graph& graph );
     // NOTE: This requires the DistGraph to be over a single process
     Graph( const DistGraph& graph );
+    // TODO: Move constructor
     ~Graph();
 
-    // High-level information
-    int NumSources() const;
-    int NumTargets() const;
+    // Assignment and reconfiguration
+    // ==============================
 
-    // Assembly-related routines
-    void StartAssembly();
-    void StopAssembly();
-    void Reserve( int numEdges );
-    void Insert( int source, int target );
-    int Capacity() const;
-
-    // Data
-    int NumEdges() const;
-    int Source( int edge ) const;
-    int Target( int edge ) const;
-    int EdgeOffset( int source ) const;
-    int NumConnections( int source ) const;
-    int* SourceBuffer();
-    int* TargetBuffer();
-    const int* LockedSourceBuffer() const;
-    const int* LockedTargetBuffer() const;
-
-    // For resizing the graph
-    void Empty();
-    void Resize( int numVertices );
-    void Resize( int numSources, int numTargets );
-
+    // Make a copy
+    // -----------
     // For copying one graph into another
     const Graph& operator=( const Graph& graph );
     // NOTE: This requires the DistGraph to be over a single process
     const Graph& operator=( const DistGraph& graph );
+    // TODO: Move assignment
+
+    // Make a copy of a contiguous subgraph
+    // ------------------------------------
+    Graph operator()( Range<Int> I, Range<Int> J ) const;
+
+    // Change the size of the graph
+    // ----------------------------
+    void Empty( bool clearMemory=true );
+    void Resize( Int numVertices );
+    void Resize( Int numSources, Int numTargets );
+
+    // Assembly
+    // --------
+    void Reserve( Int numEdges );
+
+    // Safe (but high overhead) edge insertion/removal procedures
+    void Connect( Int source, Int target );
+    void Disconnect( Int source, Int target );
+
+    void FreezeSparsity();
+    void UnfreezeSparsity();
+    bool FrozenSparsity() const;
+
+    // For appending/removing many edges and then forcing consistency at the end
+    void QueueConnection( Int source, Int target );
+    void QueueDisconnection( Int source, Int target );
+    void ProcessQueues();
+
+    // Queries
+    // =======
+    Int NumSources() const;
+    Int NumTargets() const;
+    Int NumEdges() const;
+    Int Capacity() const;
+    bool Consistent() const;
+
+    Int Source( Int edge ) const;
+    Int Target( Int edge ) const;
+    Int SourceOffset( Int source ) const;
+    Int Offset( Int source, Int target ) const;
+    Int NumConnections( Int source ) const;
+    Int* SourceBuffer();
+    Int* TargetBuffer();
+    Int* OffsetBuffer();
+    const Int* LockedSourceBuffer() const;
+    const Int* LockedTargetBuffer() const;
+    const Int* LockedOffsetBuffer() const;
+
+    void AssertConsistent() const;
 
 private:
-    int numSources_, numTargets_;
-    std::vector<int> sources_, targets_;
+    Int numSources_, numTargets_;
+    bool frozenSparsity_ = false;
+    vector<Int> sources_, targets_;
+    set<pair<Int,Int>> markedForRemoval_;
 
     // Helpers for local indexing
-    bool assembling_, sorted_;
-    std::vector<int> edgeOffsets_;
-    void ComputeEdgeOffsets();
-
-    static bool ComparePairs
-    ( const std::pair<int,int>& a, const std::pair<int,int>& b );
-
-    void EnsureNotAssembling() const;
-    void EnsureConsistentSizes() const;
-    void EnsureConsistentCapacities() const;
+    bool consistent_;
+    vector<Int> sourceOffsets_;
+    void ComputeSourceOffsets();
 
     friend class DistGraph;
     template<typename F> friend class SparseMatrix;
+
+    friend void Copy( const Graph& A, Graph& B );
+    friend void Copy( const Graph& A, DistGraph& B );
+    friend void Copy( const DistGraph& A, Graph& B );
+
+    friend void CopyFromRoot( const DistGraph& GDist, Graph& G );
+    template<typename U>
+    friend void CopyFromRoot
+    ( const DistSparseMatrix<U>& ADist, SparseMatrix<U>& A );
 };
 
 } // namespace El

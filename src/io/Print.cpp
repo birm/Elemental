@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -14,11 +14,11 @@ namespace El {
 // =====
 
 template<typename T>
-void Print( const Matrix<T>& A, std::string title, std::ostream& os )
+void Print( const Matrix<T>& A, string title, ostream& os )
 {
-    DEBUG_ONLY(CallStackEntry cse("Print"))
+    DEBUG_ONLY(CSE cse("Print"))
     if( title != "" )
-        os << title << std::endl;
+        os << title << endl;
     
     const Int height = A.Height();
     const Int width = A.Width();
@@ -26,16 +26,16 @@ void Print( const Matrix<T>& A, std::string title, std::ostream& os )
     {
         for( Int j=0; j<width; ++j )
             os << A.Get(i,j) << " ";
-        os << std::endl;
+        os << endl;
     }
-    os << std::endl;
+    os << endl;
 }
 
 template<typename T>
 void Print
-( const AbstractDistMatrix<T>& A, std::string title, std::ostream& os )
+( const AbstractDistMatrix<T>& A, string title, ostream& os )
 {
-    DEBUG_ONLY(CallStackEntry cse("Print"))
+    DEBUG_ONLY(CSE cse("Print"))
     if( A.ColStride() == 1 && A.RowStride() == 1 )
     {
         if( A.CrossRank() == A.Root() && A.RedundantRank() == 0 )
@@ -51,9 +51,9 @@ void Print
 
 template<typename T>
 void Print
-( const AbstractBlockDistMatrix<T>& A, std::string title, std::ostream& os )
+( const AbstractBlockDistMatrix<T>& A, string title, ostream& os )
 {
-    DEBUG_ONLY(CallStackEntry cse("Print"))
+    DEBUG_ONLY(CSE cse("Print"))
     if( A.ColStride() == 1 && A.RowStride() == 1 )
     {
         if( A.CrossRank() == A.Root() && A.RedundantRank() == 0 )
@@ -67,175 +67,135 @@ void Print
     }
 }
 
-// Sparse-direct
-// =============
-
-void Print( const Graph& graph, std::string msg, std::ostream& os )
+template<typename T>
+void Print( const DistMultiVec<T>& X, string title, ostream& os )
 {
-    DEBUG_ONLY(CallStackEntry cse("Print [Graph]"))
+    DEBUG_ONLY(CSE cse("Print [DistMultiVec]"))
+    const Int commRank = mpi::Rank( X.Comm() );
+    if( commRank == 0 )
+    {
+        Matrix<T> XLoc;
+        CopyFromRoot( X, XLoc );
+        Print( XLoc, title, os ); 
+    }
+    else
+    {
+        CopyFromNonRoot( X, 0 );
+    }
+}
+
+void Print( const Graph& graph, string msg, ostream& os )
+{
+    DEBUG_ONLY(CSE cse("Print [Graph]"))
+    graph.AssertConsistent();
     if( msg != "" )
-        os << msg << std::endl;
-    const int numEdges = graph.NumEdges();
-    const int* srcBuf = graph.LockedSourceBuffer();
-    const int* tgtBuf = graph.LockedTargetBuffer();
-    for( int e=0; e<numEdges; ++e )
+        os << msg << endl;
+    const Int numEdges = graph.NumEdges();
+    const Int* srcBuf = graph.LockedSourceBuffer();
+    const Int* tgtBuf = graph.LockedTargetBuffer();
+    for( Int e=0; e<numEdges; ++e )
         os << srcBuf[e] << " " << tgtBuf[e] << "\n";
-    os << std::endl;
+    os << endl;
 }
 
-void Print( const DistGraph& graph, std::string msg, std::ostream& os )
+void Print( const DistGraph& graph, string msg, ostream& os )
 {
-    DEBUG_ONLY(CallStackEntry cse("Print [DistGraph]"))
+    DEBUG_ONLY(CSE cse("Print [DistGraph]"))
+    graph.AssertLocallyConsistent();
     const mpi::Comm comm = graph.Comm();
-    const int commSize = mpi::Size( comm );
     const int commRank = mpi::Rank( comm );
-
-    const int numLocalEdges = graph.NumLocalEdges();
-    std::vector<int> edgeSizes(commSize), edgeOffsets(commSize);
-    mpi::AllGather( &numLocalEdges, 1, &edgeSizes[0], 1, comm );
-    int numEdges=0;
-    for( int q=0; q<commSize; ++q )
-    {
-        edgeOffsets[q] = numEdges;
-        numEdges += edgeSizes[q];
-    }
-
-    std::vector<int> sources, targets;
     if( commRank == 0 )
     {
-        sources.resize( numEdges );
-        targets.resize( numEdges );
+        Graph seqGraph;
+        CopyFromRoot( graph, seqGraph );
+        Print( seqGraph, msg, os );
     }
-    mpi::Gather
-    ( graph.LockedSourceBuffer(), numLocalEdges,
-      &sources[0], &edgeSizes[0], &edgeOffsets[0], 0, comm );
-    mpi::Gather
-    ( graph.LockedTargetBuffer(), numLocalEdges,
-      &targets[0], &edgeSizes[0], &edgeOffsets[0], 0, comm );
-
-    if( commRank == 0 )
+    else
     {
-        if( msg != "" )
-            os << msg << std::endl;
-        for( int e=0; e<numEdges; ++e )
-            os << sources[e] << " " << targets[e] << "\n";
-        os << std::endl;
+        CopyFromNonRoot( graph, 0 );
     }
 }
 
 template<typename T>
-void Print( const SparseMatrix<T>& A, std::string msg, std::ostream& os )
+void Print( const SparseMatrix<T>& A, string msg, ostream& os )
 {
-    DEBUG_ONLY(CallStackEntry cse("Print [SparseMatrix]"))
+    DEBUG_ONLY(CSE cse("Print [SparseMatrix]"))
+    A.AssertConsistent();
     if( msg != "" )
-        os << msg << std::endl;
-    const int numEntries = A.NumEntries();
-    const int* srcBuf = A.LockedSourceBuffer();
-    const int* tgtBuf = A.LockedTargetBuffer();
+        os << msg << endl;
+    const Int numEntries = A.NumEntries();
+    const Int* srcBuf = A.LockedSourceBuffer();
+    const Int* tgtBuf = A.LockedTargetBuffer();
     const T* valBuf = A.LockedValueBuffer();
-    for( int s=0; s<numEntries; ++s )
+    for( Int s=0; s<numEntries; ++s )
         os << srcBuf[s] << " " << tgtBuf[s] << " " << valBuf[s] << "\n";
-    os << std::endl;
+    os << endl;
 }
 
 template<typename T>
-void Print( const DistSparseMatrix<T>& A, std::string msg, std::ostream& os )
+void Print( const DistSparseMatrix<T>& A, string msg, ostream& os )
 {
-    DEBUG_ONLY(CallStackEntry cse("Print [DistSparseMatrix]"))
+    DEBUG_ONLY(CSE cse("Print [DistSparseMatrix]"))
+    A.AssertLocallyConsistent();
     const mpi::Comm comm = A.Comm();
-    const int commSize = mpi::Size( comm );
     const int commRank = mpi::Rank( comm );
 
-    const int numLocalEntries = A.NumLocalEntries();
-    std::vector<int> nonzeroSizes(commSize), nonzeroOffsets(commSize);
-    mpi::AllGather( &numLocalEntries, 1, &nonzeroSizes[0], 1, comm );
-    int numNonzeros=0;
-    for( int q=0; q<commSize; ++q )
-    {
-        nonzeroOffsets[q] = numNonzeros;
-        numNonzeros += nonzeroSizes[q];
-    }
-
-    std::vector<int> sources, targets;
-    std::vector<T> values;
     if( commRank == 0 )
     {
-        sources.resize( numNonzeros );
-        targets.resize( numNonzeros );
-        values.resize( numNonzeros );
+        SparseMatrix<T> ASeq;
+        CopyFromRoot( A, ASeq );
+        Print( ASeq, msg, os );
     }
-    mpi::Gather
-    ( A.LockedSourceBuffer(), numLocalEntries,
-      &sources[0], &nonzeroSizes[0], &nonzeroOffsets[0], 0, comm );
-    mpi::Gather
-    ( A.LockedTargetBuffer(), numLocalEntries,
-      &targets[0], &nonzeroSizes[0], &nonzeroOffsets[0], 0, comm );
-    mpi::Gather
-    ( A.LockedValueBuffer(), numLocalEntries,
-      &values[0], &nonzeroSizes[0], &nonzeroOffsets[0], 0, comm );
-
-    if( commRank == 0 )
+    else
     {
-        if( msg != "" )
-            os << msg << std::endl;
-        for( int s=0; s<numNonzeros; ++s )
-            os << sources[s] << " " << targets[s] << " " << values[s] << "\n";
-        os << std::endl;
+        CopyFromNonRoot( A, 0 );
     }
 }
 
-void PrintLocal( const DistSymmInfo& info, std::string msg, std::ostream& os )
-{
-    DEBUG_ONLY(CallStackEntry cse("PrintLocal [DistSymmInfo]"))
-    os << "Local nodes:" << std::endl;
-    const int numLocal = info.localNodes.size();
-    for( int s=0; s<numLocal; ++s )
-    {
-        const SymmNodeInfo& node = info.localNodes[s];
-        os << " size=" << node.size << ", offset=" << node.off << "\n";
-    }
+// Multifrontal
+// ============
 
-    os << "Distributed nodes:" << std::endl;
-    const int numDist = info.distNodes.size();
-    for( int s=0; s<numDist; ++s )
-    {
-        const DistSymmNodeInfo& node = info.distNodes[s];
-        os << " size=" << node.size << ", offset=" << node.off << "\n";
-    }
+void PrintLocal
+( const ldl::DistNodeInfo& info, string msg, ostream& os )
+{
+    DEBUG_ONLY(CSE cse("PrintLocal [ldl::DistNodeInfo]"))
+    LogicError("This routine needs to be rewritten");
 }
 
 // Utilities
 // =========
 
 template<typename T>
-void Print( const std::vector<T>& x, std::string title, std::ostream& os )
+void Print( const vector<T>& x, string title, ostream& os )
 {
-    DEBUG_ONLY(CallStackEntry cse("Print"))
+    DEBUG_ONLY(CSE cse("Print"))
     if( title != "" )
-        os << title << std::endl;
+        os << title << endl;
     
     const Int length = x.size();
     for( Int i=0; i<length; ++i )
         os << x[i] << " ";
-    os << std::endl;
+    os << endl;
 }
-
 
 #define PROTO(T) \
   template void Print \
-  ( const std::vector<T>& x, std::string title, std::ostream& os ); \
+  ( const vector<T>& x, string title, ostream& os ); \
   template void Print \
-  ( const Matrix<T>& A, std::string title, std::ostream& os ); \
+  ( const Matrix<T>& A, string title, ostream& os ); \
   template void Print \
-  ( const AbstractDistMatrix<T>& A, std::string title, std::ostream& os ); \
+  ( const AbstractDistMatrix<T>& A, string title, ostream& os ); \
   template void Print \
   ( const AbstractBlockDistMatrix<T>& A, \
-    std::string title, std::ostream& os ); \
+    string title, ostream& os ); \
   template void Print \
-  ( const SparseMatrix<T>& A, std::string title, std::ostream& os ); \
+  ( const DistMultiVec<T>& X, string title, ostream& os ); \
   template void Print \
-  ( const DistSparseMatrix<T>& A, std::string title, std::ostream& os );
+  ( const SparseMatrix<T>& A, string title, ostream& os ); \
+  template void Print \
+  ( const DistSparseMatrix<T>& A, string title, ostream& os );
 
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

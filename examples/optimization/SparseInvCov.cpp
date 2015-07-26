@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -20,8 +20,7 @@ using namespace El;
 typedef double Real;
 typedef Real F;
 
-int 
-main( int argc, char* argv[] )
+int main( int argc, char* argv[] )
 {
     Initialize( argc, argv );
 
@@ -76,7 +75,7 @@ main( int argc, char* argv[] )
         HermitianEig( LOWER, G, w );
         Real minEig = Min(w).value;
         if( minEig <= Real(0) )
-            UpdateDiagonal( SInv, shift-shiftScale*minEig );
+            ShiftDiagonal( SInv, shift-shiftScale*minEig );
 
         // Inverse SInv
         DistMatrix<F> S( SInv );
@@ -93,19 +92,19 @@ main( int argc, char* argv[] )
         HermitianEig( LOWER, G, w );
         minEig = Min(w).value;
         if( minEig <= Real(0) )
-            UpdateDiagonal( SNoisy, shift-shiftScale*minEig );
+            ShiftDiagonal( SNoisy, shift-shiftScale*minEig );
 
         // Sample from the noisy covariance matrix
         DistMatrix<F> D;
         Gaussian( D, N, n );
         Covariance( D, G );
-        UpdateDiagonal( G, F(-1) );
+        ShiftDiagonal( G, F(-1) );
         const Real unitCovErrNorm = FrobeniusNorm( G );
         G = SNoisy;
         Cholesky( LOWER, G );
         Trmm( RIGHT, LOWER, TRANSPOSE, NON_UNIT, F(1), G, D );
         Covariance( D, G );
-        Axpy( F(-1), SNoisy, G );
+        G -= SNoisy;
         const Real SNorm = FrobeniusNorm( S );
         const Real SNoisyNorm = FrobeniusNorm( SNoisy );
         const Real covErrNorm = FrobeniusNorm( G );
@@ -125,32 +124,37 @@ main( int argc, char* argv[] )
             Display( D, "D" );
         }
         if( mpi::Rank(mpi::COMM_WORLD) == 0 )
-            std::cout << "|| S            ||_F         = " << SNorm << "\n"
-                      << "|| SNoisy       ||_F         = " << SNoisyNorm << "\n"
-                      << "|| cov(Omega)-I ||_F         = " << unitCovErrNorm 
-                      << "\n"
-                      << "|| cov(D)-SNoisy ||_F / || S ||_F = " 
-                      << covErrNorm/SNorm << "\n"
-                      << std::endl;
+            cout << "|| S            ||_F         = " << SNorm << "\n"
+                 << "|| SNoisy       ||_F         = " << SNoisyNorm << "\n"
+                 << "|| cov(Omega)-I ||_F         = " << unitCovErrNorm 
+                 << "\n"
+                 << "|| cov(D)-SNoisy ||_F / || S ||_F = " 
+                 << covErrNorm/SNorm << "\n" << endl;
+
+        SparseInvCovCtrl<Base<F>> ctrl;
+        ctrl.rho = rho;
+        ctrl.alpha = alpha;
+        ctrl.maxIter = maxIter;
+        ctrl.absTol = absTol;
+        ctrl.relTol = relTol;
+        ctrl.progress = progress;
 
         DistMatrix<F> Z;
-        SparseInvCov
-        ( D, lambda, Z, rho, alpha, maxIter, absTol, relTol, progress );
+        SparseInvCov( D, lambda, Z, ctrl );
 
         const Real SInvNorm = FrobeniusNorm( SInv );
         G = Z;
-        Axpy( F(-1), SInv, G );
+        G -= SInv;
         const Real ZErrNorm = FrobeniusNorm( G );
         if( print )
             Print( Z, "Z" );
         if( mpi::Rank(mpi::COMM_WORLD) == 0 )
-            std::cout << "|| SInv     ||_F                = " 
-                      << SInvNorm << "\n"
-                      << "|| Z - SInv ||_F / || SInv ||_F = "
-                      << ZErrNorm/SInvNorm << "\n"
-                      << std::endl;
+            cout << "|| SInv     ||_F                = " 
+                 << SInvNorm << "\n"
+                 << "|| Z - SInv ||_F / || SInv ||_F = "
+                 << ZErrNorm/SInvNorm << "\n" << endl;
     }
-    catch( std::exception& e ) { ReportException(e); }
+    catch( exception& e ) { ReportException(e); }
 
     Finalize();
     return 0;

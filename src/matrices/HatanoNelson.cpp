@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -16,73 +16,47 @@ template<typename F>
 void HatanoNelson
 ( Matrix<F>& A, Int n, F center, Base<F> radius, F g, bool periodic )
 {
-    DEBUG_ONLY(CallStackEntry cse("HatanoNelson"))
+    DEBUG_ONLY(CSE cse("HatanoNelson"))
     if( n < 3 )
         LogicError("Hatano Nelson requires at least a 3x3 matrix");
     Zeros( A, n, n );
-    auto d = A.GetDiagonal();
-    MakeUniform( d, center, radius );
-    A.SetDiagonal( d );
-    SetDiagonal( A, Exp(g),   1 );
-    SetDiagonal( A, Exp(-g), -1 );
+
+    Matrix<F> d;
+    Uniform( d, n, 1, center, radius );
+    SetDiagonal( A, d );
+
+    FillDiagonal( A, Exp(g), 1 );
     if( periodic )
-    {
-        A.Set( 0,   n-1, Exp(-g) );
-        A.Set( n-1, 0,   Exp( g) );
-    }
+        A.Set( n-1, 0, Exp(g) );
+
+    FillDiagonal( A, Exp(-g), -1 );
+    if( periodic )
+        A.Set( 0, n-1, Exp(-g) );
 }
 
 template<typename F>
 void HatanoNelson
-( AbstractDistMatrix<F>& APre, Int n, 
+( AbstractDistMatrix<F>& A, Int n, 
   F center, Base<F> radius, F g, bool periodic )
 {
-    DEBUG_ONLY(CallStackEntry cse("HatanoNelson"))
+    DEBUG_ONLY(CSE cse("HatanoNelson"))
     if( n < 3 )
         LogicError("Hatano Nelson requires at least a 3x3 matrix");
 
-    auto APtr = WriteProxy<F,MC,MR>( &APre );
-    auto& A = *APtr;
-
     Zeros( A, n, n );
-    auto d = A.GetDiagonal();
-    MakeUniform( d, center, radius );
-    A.SetDiagonal( d );
-    SetDiagonal( A, Exp(g),   1 );
-    SetDiagonal( A, Exp(-g), -1 );
+
+    DistMatrix<F,MC,STAR> d(A.Grid());
+    Uniform( d, n, 1, center, radius );
+    SetDiagonal( A, d );
+
+    FillDiagonal( A, Exp(g), 1 );
     if( periodic )
-    {
-        A.Set( 0,   n-1, Exp(-g) );
-        A.Set( n-1, 0,   Exp( g) );
-    }
-}
+        A.Set( n-1, 0, Exp(g) );
 
-/*
-template<typename F>
-void HatanoNelson
-( AbstractBlockDistMatrix<F>& APre, Int n, 
-  F center, Base<F> radius, F g, bool periodic )
-{
-    DEBUG_ONLY(CallStackEntry cse("HatanoNelson"))
-    if( n < 3 )
-        LogicError("Hatano Nelson requires at least a 3x3 matrix");
-
-    auto APtr = WriteProxy<F,MC,MR>( &APre );
-    auto& A = *APtr;
-
-    Zeros( A, n, n );
-    auto d = A.GetDiagonal();
-    MakeUniform( d, center, radius );
-    A.SetDiagonal( d );
-    SetDiagonal( A, Exp(g),   1 );
-    SetDiagonal( A, Exp(-g), -1 );
+    FillDiagonal( A, Exp(-g), -1 );
     if( periodic )
-    {
-        A.Set( 0,   n-1, Exp(-g) );
-        A.Set( n-1, 0,   Exp( g) );
-    }
+        A.Set( 0, n-1, Exp(-g) );
 }
-*/
 
 #define PROTO(F) \
   template void HatanoNelson \
@@ -92,6 +66,7 @@ void HatanoNelson
     F center, Base<F> radius, F g, bool periodic );
 
 #define EL_NO_INT_PROTO
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

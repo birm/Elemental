@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson, Lexing Ying,
+   Copyright (c) 2009-2015, Jack Poulson, Lexing Ying,
    The University of Texas at Austin, Stanford University, and the
    Georgia Insitute of Technology.
    All rights reserved.
@@ -22,66 +22,104 @@ class DistMultiVec
 {
 public:
     // Constructors and destructors
-    DistMultiVec();
-    DistMultiVec( mpi::Comm comm );
-    DistMultiVec( int height, int width, mpi::Comm comm );
+    // ============================
+    DistMultiVec( mpi::Comm comm=mpi::COMM_WORLD );
+    DistMultiVec( Int height, Int width, mpi::Comm comm=mpi::COMM_WORLD );
+    DistMultiVec( const DistMultiVec<T>& A );
     ~DistMultiVec();
 
-    // High-level information
-    int Height() const;
-    int Width() const;
+    // Assignment  and reconfiguration
+    // ===============================
 
-    // Communicator management
+    // Change the matrix size
+    // ----------------------
+    void Empty();
+    void Resize( Int height, Int width );
+
+    // Change the distribution
+    // -----------------------
     void SetComm( mpi::Comm comm );
-    mpi::Comm Comm() const;
+
+    // Operator overloading
+    // ====================
+
+    // Make a copy of a submatrix
+    // --------------------------
+    DistMultiVec<T> operator()( Range<Int> I, Range<Int> J ) const;
+   
+    // Assignment
+    // ----------
+    const DistMultiVec<T>& operator=( const DistMultiVec<T>& X );
+    const DistMultiVec<T>& operator=( const AbstractDistMatrix<T>& X );
+
+    // Rescaling
+    // ---------
+    const DistMultiVec<T>& operator*=( T alpha );
+
+    // Addition/subtraction
+    // --------------------
+    const DistMultiVec<T>& operator+=( const DistMultiVec<T>& A );
+    const DistMultiVec<T>& operator-=( const DistMultiVec<T>& A );
+
+    // Queries
+    // =======
+
+    // High-level data
+    // ---------------
+    Int Height() const;
+    Int Width() const;
+    Int FirstLocalRow() const;
+    Int LocalHeight() const;
+          El::Matrix<T>& Matrix();
+    const El::Matrix<T>& LockedMatrix() const;
 
     // Distribution information
-    int Blocksize() const;
-    int FirstLocalRow() const;
-    int LocalHeight() const;
+    // ------------------------
+    mpi::Comm Comm() const;
+    Int Blocksize() const;
+    int RowOwner( Int i ) const;
+    int Owner( Int i, Int j ) const;
+    bool IsLocal( Int i, Int j ) const;
+    bool IsLocalRow( Int i ) const;
+    Int GlobalRow( Int iLoc ) const;
+    Int LocalRow( Int i ) const;
 
-    // Local data
-    T GetLocal( int localRow, int col ) const;
-    void SetLocal( int localRow, int col, T value );
-    void UpdateLocal( int localRow, int col, T value );
+    // Entrywise manipulation
+    // ======================
+    T Get( Int i, Int j ) const;
+    T GetLocal( Int iLoc, Int j ) const;
+    void Set( Int i, Int j, T value );
+    void Set( const Entry<T>& entry );
+    void SetLocal( Int iLoc, Int j, T value );
+    void SetLocal( const Entry<T>& localEntry );
+    void Update( Int i, Int j, T value );
+    void Update( const Entry<T>& entry );
+    void UpdateLocal( Int iLoc, Int j, T value );
+    void UpdateLocal( const Entry<T>& entry );
 
-    // For modifying the size of the multi-vector
-    void Empty();
-    void Resize( int height, int width );
-
-    // Assignment
-    const DistMultiVec<T>& operator=( const DistMultiVec<T>& X );
+    // Batch updating of remote entries
+    // --------------------------------
+    void Reserve( Int numRemoteEntries );
+    void QueueUpdate( const Entry<T>& entry );
+    void QueueUpdate( Int i, Int j, T value );
+    void ProcessQueues();
 
 private:
-    int height_, width_;
+    Int height_, width_;
 
     mpi::Comm comm_;
 
-    int blocksize_;
-    int firstLocalRow_;
+    Int blocksize_;
+    Int firstLocalRow_;
 
-    Matrix<T> multiVec_;
+    El::Matrix<T> multiVec_;
+
+    // Remote updates
+    // --------------
+    vector<Entry<T>> remoteUpdates_;
+
+    void InitializeLocalData();
 };
-
-// Set all of the entries of X to zero
-template<typename T>
-void Zero( DistMultiVec<T>& X );
-
-// Draw the entries of X uniformly from the unitball in T
-template<typename T>
-void MakeUniform( DistMultiVec<T>& X );
-
-// Just column-wise l2 norms for now
-template<typename F>
-void Norms( const DistMultiVec<F>& X, std::vector<Base<F>>& norms );
-
-// Simplification for case where there is only one column
-template<typename F>
-Base<F> Norm( const DistMultiVec<F>& x );
-
-// Y := alpha X + Y
-template<typename T>
-void Axpy( T alpha, const DistMultiVec<T>& X, DistMultiVec<T>& Y );
 
 } // namespace El
 

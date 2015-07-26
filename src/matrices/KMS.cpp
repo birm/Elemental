@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -13,37 +13,37 @@ namespace El {
 template<typename T> 
 void KMS( Matrix<T>& K, Int n, T rho )
 {
-    DEBUG_ONLY(CallStackEntry cse("KMS"))
+    DEBUG_ONLY(CSE cse("KMS"))
     K.Resize( n, n );
     auto kmsFill = 
-      [=]( Int i, Int j )
+      [=]( Int i, Int j ) -> T
       { if( i < j ) { return Pow(rho,T(j-i));       } 
         else        { return Conj(Pow(rho,T(i-j))); } };
-    IndexDependentFill( K, std::function<T(Int,Int)>(kmsFill) );
+    IndexDependentFill( K, function<T(Int,Int)>(kmsFill) );
 }
 
 template<typename T>
 void KMS( AbstractDistMatrix<T>& K, Int n, T rho )
 {
-    DEBUG_ONLY(CallStackEntry cse("KMS"))
+    DEBUG_ONLY(CSE cse("KMS"))
     K.Resize( n, n );
     auto kmsFill = 
-      [=]( Int i, Int j )
+      [=]( Int i, Int j ) -> T
       { if( i < j ) { return Pow(rho,T(j-i));       } 
         else        { return Conj(Pow(rho,T(i-j))); } };
-    IndexDependentFill( K, std::function<T(Int,Int)>(kmsFill) );
+    IndexDependentFill( K, function<T(Int,Int)>(kmsFill) );
 }
 
 template<typename T>
 void KMS( AbstractBlockDistMatrix<T>& K, Int n, T rho )
 {
-    DEBUG_ONLY(CallStackEntry cse("KMS"))
+    DEBUG_ONLY(CSE cse("KMS"))
     K.Resize( n, n );
     auto kmsFill = 
-      [=]( Int i, Int j )
+      [=]( Int i, Int j ) -> T
       { if( i < j ) { return Pow(rho,T(j-i));       } 
         else        { return Conj(Pow(rho,T(i-j))); } };
-    IndexDependentFill( K, std::function<T(Int,Int)>(kmsFill) );
+    IndexDependentFill( K, function<T(Int,Int)>(kmsFill) );
 }
 
 #define PROTO(T) \
@@ -51,6 +51,7 @@ void KMS( AbstractBlockDistMatrix<T>& K, Int n, T rho )
   template void KMS( AbstractDistMatrix<T>& K, Int n, T rho ); \
   template void KMS( AbstractBlockDistMatrix<T>& K, Int n, T rho );
 
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -17,46 +17,46 @@ namespace El {
 template<typename F>
 void Kahan( Matrix<F>& A, Int n, F phi )
 {
-    DEBUG_ONLY(CallStackEntry cse("Kahan"))
+    DEBUG_ONLY(CSE cse("Kahan"))
     A.Resize( n, n );
     const F zeta = Sqrt(F(1)-phi*Conj(phi));
     typedef Base<F> Real;
     auto kahanFill = 
-      [=]( Int i, Int j )
+      [=]( Int i, Int j ) -> F
       { if( i == j )      { return      Pow(zeta,Real(i)); }
         else if(  i < j ) { return -phi*Pow(zeta,Real(i)); }
         else              { return F(0);                   } };
-    IndexDependentFill( A, std::function<F(Int,Int)>(kahanFill) );
+    IndexDependentFill( A, function<F(Int,Int)>(kahanFill) );
 }
 
 template<typename F>
 void Kahan( AbstractDistMatrix<F>& A, Int n, F phi )
 {
-    DEBUG_ONLY(CallStackEntry cse("Kahan"))
+    DEBUG_ONLY(CSE cse("Kahan"))
     A.Resize( n, n );
     const F zeta = Sqrt(F(1)-phi*Conj(phi));
     typedef Base<F> Real;
     auto kahanFill = 
-      [=]( Int i, Int j )
+      [=]( Int i, Int j ) -> F
       { if( i == j )      { return      Pow(zeta,Real(i)); }
         else if(  i < j ) { return -phi*Pow(zeta,Real(i)); }
         else              { return F(0);                   } };
-    IndexDependentFill( A, std::function<F(Int,Int)>(kahanFill) );
+    IndexDependentFill( A, function<F(Int,Int)>(kahanFill) );
 }
 
 template<typename F>
 void Kahan( AbstractBlockDistMatrix<F>& A, Int n, F phi )
 {
-    DEBUG_ONLY(CallStackEntry cse("Kahan"))
+    DEBUG_ONLY(CSE cse("Kahan"))
     A.Resize( n, n );
     const F zeta = Sqrt(F(1)-phi*Conj(phi));
     typedef Base<F> Real;
     auto kahanFill = 
-      [=]( Int i, Int j )
+      [=]( Int i, Int j ) -> F
       { if( i == j )      { return      Pow(zeta,Real(i)); }
         else if(  i < j ) { return -phi*Pow(zeta,Real(i)); }
         else              { return F(0);                   } };
-    IndexDependentFill( A, std::function<F(Int,Int)>(kahanFill) );
+    IndexDependentFill( A, function<F(Int,Int)>(kahanFill) );
 }
 
 #define PROTO(F) \
@@ -65,6 +65,7 @@ void Kahan( AbstractBlockDistMatrix<F>& A, Int n, F phi )
   template void Kahan( AbstractBlockDistMatrix<F>& A, Int n, F phi ); 
 
 #define EL_NO_INT_PROTO
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

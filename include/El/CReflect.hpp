@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -55,15 +55,44 @@ template<typename T>
 inline void DynamicCastCheck( T* A )
 { if( A == nullptr ) RuntimeError("Dynamic cast failed"); }
 
-inline std::string CReflect( const char* name )
-{ return std::string(name); }
+inline string CReflect( const char* name ) { return string(name); }
 // NOTE: This creates a deep copy and the pointer should be deleted later
-inline char* CReflect( const std::string& name ) 
+inline char* CReflect( const string& name ) 
 {
     const auto size = name.size();
     char* buffer = new char[size+1];
     memcpy( buffer, name.c_str(), size+1 );
     return buffer;
+}
+
+inline Range<Int> CReflect( ElRange_i rangeC )
+{ return Range<Int>(rangeC.beg,rangeC.end); }
+inline ElRange_i CReflect( Range<Int> range )
+{ 
+    ElRange_i rangeC; 
+    rangeC.beg = range.beg; 
+    rangeC.end = range.end; 
+    return rangeC; 
+}
+
+inline Range<float> CReflect( ElRange_s rangeC )
+{ return Range<float>(rangeC.beg,rangeC.end); }
+inline ElRange_s CReflect( Range<float> range )
+{ 
+    ElRange_s rangeC; 
+    rangeC.beg = range.beg; 
+    rangeC.end = range.end; 
+    return rangeC; 
+}
+
+inline Range<double> CReflect( ElRange_d rangeC )
+{ return Range<double>(rangeC.beg,rangeC.end); }
+inline ElRange_d CReflect( Range<double> range )
+{ 
+    ElRange_d rangeC; 
+    rangeC.beg = range.beg; 
+    rangeC.end = range.end; 
+    return rangeC; 
 }
 
 inline Orientation CReflect( ElOrientation orient ) 
@@ -237,29 +266,30 @@ inline ValueInt<Complex<double>>* CReflect( ElValueInt_z* entryC )
 inline ElValueInt_z* CReflect( ValueInt<Complex<double>>* entryC )
 { return EL_RC(ElValueInt_z*,entryC); }
 
-inline ValueIntPair<Int> CReflect( ElValueIntPair_i entryC )
-{ return {entryC.value,{entryC.indices[0],entryC.indices[1]}}; }
-inline ElValueIntPair_i CReflect( ValueIntPair<Int> entry )
-{ return {entry.value,{entry.indices[0],entry.indices[1]}}; }
+inline Entry<Int> CReflect( ElEntry_i entryC )
+{ return { entryC.i, entryC.j, entryC.value }; }
+inline ElEntry_i CReflect( Entry<Int> entry )
+{ return { entry.i, entry.j, entry.value }; }
 
-inline ValueIntPair<float> CReflect( ElValueIntPair_s entryC )
-{ return {entryC.value,{entryC.indices[0],entryC.indices[1]}}; }
-inline ElValueIntPair_s CReflect( ValueIntPair<float> entry )
-{ return {entry.value,{entry.indices[0],entry.indices[1]}}; }
+inline Entry<float> CReflect( ElEntry_s entryC )
+{ return { entryC.i, entryC.j, entryC.value }; }
+inline ElEntry_s CReflect( Entry<float> entry )
+{ return { entry.i, entry.j, entry.value }; }
 
-inline ValueIntPair<double> CReflect( ElValueIntPair_d entryC )
-{ return {entryC.value,{entryC.indices[0],entryC.indices[1]}}; }
-inline ElValueIntPair_d CReflect( ValueIntPair<double> entry )
-{ return {entry.value,{entry.indices[0],entry.indices[1]}}; }
+inline Entry<double> CReflect( ElEntry_d entryC )
+{ return { entryC.i, entryC.j, entryC.value }; }
+inline ElEntry_d CReflect( Entry<double> entry )
+{ return { entry.i, entry.j, entry.value }; }
 
-inline ValueIntPair<Complex<float>> CReflect( ElValueIntPair_c entryC ) { return {CReflect(entryC.value),{entryC.indices[0],entryC.indices[1]}}; }
-inline ElValueIntPair_c CReflect( ValueIntPair<Complex<float>> entry )
-{ return {CReflect(entry.value),{entry.indices[0],entry.indices[1]}}; }
+inline Entry<Complex<float>> CReflect( ElEntry_c entryC ) 
+{ return { entryC.i, entryC.j, CReflect(entryC.value) }; }
+inline ElEntry_c CReflect( Entry<Complex<float>> entry )
+{ return { entry.i, entry.j, CReflect(entry.value) }; }
 
-inline ValueIntPair<Complex<double>> CReflect( ElValueIntPair_z entryC )
-{ return {CReflect(entryC.value),{entryC.indices[0],entryC.indices[1]}}; }
-inline ElValueIntPair_z CReflect( ValueIntPair<Complex<double>> entry )
-{ return {CReflect(entry.value),{entry.indices[0],entry.indices[1]}}; }
+inline Entry<Complex<double>> CReflect( ElEntry_z entryC )
+{ return { entryC.i, entryC.j, CReflect(entryC.value) }; }
+inline ElEntry_z CReflect( Entry<Complex<double>> entry )
+{ return { entry.i, entry.j, CReflect(entry.value) }; }
 
 // Matrix
 // ------
@@ -405,6 +435,231 @@ inline ElConstDistMatrix_z
 CReflect( const AbstractDistMatrix<Complex<double>>* A )
 { return (ElConstDistMatrix_z)EL_RC(const struct ElDistMatrix_zDummy*,A); }
 
+/* Graph
+   ----- */
+inline Graph* CReflect( ElGraph graph )
+{ return EL_RC(Graph*,graph); }
+
+inline const Graph* CReflect( ElConstGraph graph )
+{ return EL_RC(const Graph*,graph); }
+
+inline ElGraph CReflect( Graph* graph )
+{ return EL_RC(ElGraph,graph); }
+
+inline ElConstGraph CReflect( const Graph* graph )
+{ return EL_RC(ElConstGraph,graph); }
+
+/* DistGraph
+   --------- */
+inline DistGraph* CReflect( ElDistGraph graph )
+{ return EL_RC(DistGraph*,graph); }
+
+inline const DistGraph* CReflect( ElConstDistGraph graph )
+{ return EL_RC(const DistGraph*,graph); }
+
+inline ElDistGraph CReflect( DistGraph* graph )
+{ return EL_RC(ElDistGraph,graph); }
+
+inline ElConstDistGraph CReflect( const DistGraph* graph )
+{ return EL_RC(ElConstDistGraph,graph); }
+
+/* SparseMatrix
+   ------------ */
+inline SparseMatrix<Int>* CReflect( ElSparseMatrix_i A )
+{ return EL_RC(SparseMatrix<Int>*,A); }
+
+inline SparseMatrix<float>* CReflect( ElSparseMatrix_s A )
+{ return EL_RC(SparseMatrix<float>*,A); }
+
+inline SparseMatrix<double>* CReflect( ElSparseMatrix_d A )
+{ return EL_RC(SparseMatrix<double>*,A); }
+
+inline SparseMatrix<Complex<float>>* CReflect( ElSparseMatrix_c A )
+{ return EL_RC(SparseMatrix<Complex<float>>*,A); }
+
+inline SparseMatrix<Complex<double>>* CReflect( ElSparseMatrix_z A )
+{ return EL_RC(SparseMatrix<Complex<double>>*,A); }
+
+inline const SparseMatrix<Int>* CReflect( ElConstSparseMatrix_i A )
+{ return EL_RC(const SparseMatrix<Int>*,A); }
+
+inline const SparseMatrix<float>* CReflect( ElConstSparseMatrix_s A )
+{ return EL_RC(const SparseMatrix<float>*,A); }
+
+inline const SparseMatrix<double>* CReflect( ElConstSparseMatrix_d A )
+{ return EL_RC(const SparseMatrix<double>*,A); }
+
+inline const SparseMatrix<Complex<float>>* CReflect( ElConstSparseMatrix_c A )
+{ return EL_RC(const SparseMatrix<Complex<float>>*,A); }
+
+inline const SparseMatrix<Complex<double>>* CReflect( ElConstSparseMatrix_z A )
+{ return EL_RC(const SparseMatrix<Complex<double>>*,A); }
+
+inline ElSparseMatrix_i CReflect( SparseMatrix<Int>* A )
+{ return (ElSparseMatrix_i)EL_RC(struct ElSparseMatrix_iDummy*,A); }
+
+inline ElSparseMatrix_s CReflect( SparseMatrix<float>* A )
+{ return (ElSparseMatrix_s)EL_RC(struct ElSparseMatrix_sDummy*,A); }
+
+inline ElSparseMatrix_d CReflect( SparseMatrix<double>* A )
+{ return (ElSparseMatrix_d)EL_RC(struct ElSparseMatrix_dDummy*,A); }
+
+inline ElSparseMatrix_c CReflect( SparseMatrix<Complex<float>>* A )
+{ return (ElSparseMatrix_c)EL_RC(struct ElSparseMatrix_cDummy*,A); }
+
+inline ElSparseMatrix_z CReflect( SparseMatrix<Complex<double>>* A )
+{ return (ElSparseMatrix_z)EL_RC(struct ElSparseMatrix_zDummy*,A); }
+
+inline ElConstSparseMatrix_i CReflect( const SparseMatrix<Int>* A )
+{ return (ElConstSparseMatrix_i)EL_RC(const struct ElSparseMatrix_iDummy*,A); }
+
+inline ElConstSparseMatrix_s CReflect( const SparseMatrix<float>* A )
+{ return (ElConstSparseMatrix_s)EL_RC(const struct ElSparseMatrix_sDummy*,A); }
+
+inline ElConstSparseMatrix_d CReflect( const SparseMatrix<double>* A )
+{ return (ElConstSparseMatrix_d)EL_RC(const struct ElSparseMatrix_dDummy*,A); }
+
+inline ElConstSparseMatrix_c CReflect( const SparseMatrix<Complex<float>>* A )
+{ return (ElConstSparseMatrix_c)EL_RC(const struct ElSparseMatrix_cDummy*,A); }
+
+inline ElConstSparseMatrix_z CReflect( const SparseMatrix<Complex<double>>* A )
+{ return (ElConstSparseMatrix_z)EL_RC(const struct ElSparseMatrix_zDummy*,A); }
+
+/* DistSparseMatrix
+   ---------------- */
+inline DistSparseMatrix<Int>* CReflect( ElDistSparseMatrix_i A )
+{ return EL_RC(DistSparseMatrix<Int>*,A); }
+
+inline DistSparseMatrix<float>* CReflect( ElDistSparseMatrix_s A )
+{ return EL_RC(DistSparseMatrix<float>*,A); }
+
+inline DistSparseMatrix<double>* CReflect( ElDistSparseMatrix_d A )
+{ return EL_RC(DistSparseMatrix<double>*,A); }
+
+inline DistSparseMatrix<Complex<float>>* CReflect( ElDistSparseMatrix_c A )
+{ return EL_RC(DistSparseMatrix<Complex<float>>*,A); }
+
+inline DistSparseMatrix<Complex<double>>* CReflect( ElDistSparseMatrix_z A )
+{ return EL_RC(DistSparseMatrix<Complex<double>>*,A); }
+
+inline const DistSparseMatrix<Int>* CReflect( ElConstDistSparseMatrix_i A )
+{ return EL_RC(const DistSparseMatrix<Int>*,A); }
+
+inline const DistSparseMatrix<float>* CReflect( ElConstDistSparseMatrix_s A )
+{ return EL_RC(const DistSparseMatrix<float>*,A); }
+
+inline const DistSparseMatrix<double>* CReflect( ElConstDistSparseMatrix_d A )
+{ return EL_RC(const DistSparseMatrix<double>*,A); }
+
+inline const DistSparseMatrix<Complex<float>>* CReflect
+( ElConstDistSparseMatrix_c A )
+{ return EL_RC(const DistSparseMatrix<Complex<float>>*,A); }
+
+inline const DistSparseMatrix<Complex<double>>* CReflect
+( ElConstDistSparseMatrix_z A )
+{ return EL_RC(const DistSparseMatrix<Complex<double>>*,A); }
+
+inline ElDistSparseMatrix_i CReflect( DistSparseMatrix<Int>* A )
+{ return (ElDistSparseMatrix_i)EL_RC(struct ElDistSparseMatrix_iDummy*,A); }
+
+inline ElDistSparseMatrix_s CReflect( DistSparseMatrix<float>* A )
+{ return (ElDistSparseMatrix_s)EL_RC(struct ElDistSparseMatrix_sDummy*,A); }
+
+inline ElDistSparseMatrix_d CReflect( DistSparseMatrix<double>* A )
+{ return (ElDistSparseMatrix_d)EL_RC(struct ElDistSparseMatrix_dDummy*,A); }
+
+inline ElDistSparseMatrix_c CReflect( DistSparseMatrix<Complex<float>>* A )
+{ return (ElDistSparseMatrix_c)EL_RC(struct ElDistSparseMatrix_cDummy*,A); }
+
+inline ElDistSparseMatrix_z CReflect( DistSparseMatrix<Complex<double>>* A )
+{ return (ElDistSparseMatrix_z)EL_RC(struct ElDistSparseMatrix_zDummy*,A); }
+
+inline ElConstDistSparseMatrix_i CReflect( const DistSparseMatrix<Int>* A )
+{ return (ElConstDistSparseMatrix_i)
+  EL_RC(const struct ElDistSparseMatrix_iDummy*,A); }
+
+inline ElConstDistSparseMatrix_s CReflect
+( const DistSparseMatrix<float>* A )
+{ return (ElConstDistSparseMatrix_s)
+  EL_RC(const struct ElDistSparseMatrix_sDummy*,A); }
+
+inline ElConstDistSparseMatrix_d CReflect
+( const DistSparseMatrix<double>* A )
+{ return (ElConstDistSparseMatrix_d)
+  EL_RC(const struct ElDistSparseMatrix_dDummy*,A); }
+
+inline ElConstDistSparseMatrix_c CReflect
+( const DistSparseMatrix<Complex<float>>* A )
+{ return (ElConstDistSparseMatrix_c)
+  EL_RC(const struct ElDistSparseMatrix_cDummy*,A); }
+
+inline ElConstDistSparseMatrix_z CReflect
+( const DistSparseMatrix<Complex<double>>* A )
+{ return (ElConstDistSparseMatrix_z)
+  EL_RC(const struct ElDistSparseMatrix_zDummy*,A); }
+
+/* DistMultiVec
+   ------------ */
+inline DistMultiVec<Int>* CReflect( ElDistMultiVec_i A )
+{ return EL_RC(DistMultiVec<Int>*,A); }
+
+inline DistMultiVec<float>* CReflect( ElDistMultiVec_s A )
+{ return EL_RC(DistMultiVec<float>*,A); }
+
+inline DistMultiVec<double>* CReflect( ElDistMultiVec_d A )
+{ return EL_RC(DistMultiVec<double>*,A); }
+
+inline DistMultiVec<Complex<float>>* CReflect( ElDistMultiVec_c A )
+{ return EL_RC(DistMultiVec<Complex<float>>*,A); }
+
+inline DistMultiVec<Complex<double>>* CReflect( ElDistMultiVec_z A )
+{ return EL_RC(DistMultiVec<Complex<double>>*,A); }
+
+inline const DistMultiVec<Int>* CReflect( ElConstDistMultiVec_i A )
+{ return EL_RC(const DistMultiVec<Int>*,A); }
+
+inline const DistMultiVec<float>* CReflect( ElConstDistMultiVec_s A )
+{ return EL_RC(const DistMultiVec<float>*,A); }
+
+inline const DistMultiVec<double>* CReflect( ElConstDistMultiVec_d A )
+{ return EL_RC(const DistMultiVec<double>*,A); }
+
+inline const DistMultiVec<Complex<float>>* CReflect( ElConstDistMultiVec_c A )
+{ return EL_RC(const DistMultiVec<Complex<float>>*,A); }
+
+inline const DistMultiVec<Complex<double>>* CReflect( ElConstDistMultiVec_z A )
+{ return EL_RC(const DistMultiVec<Complex<double>>*,A); }
+
+inline ElDistMultiVec_i CReflect( DistMultiVec<Int>* A )
+{ return (ElDistMultiVec_i)EL_RC(struct ElDistMultiVec_iDummy*,A); }
+
+inline ElDistMultiVec_s CReflect( DistMultiVec<float>* A )
+{ return (ElDistMultiVec_s)EL_RC(struct ElDistMultiVec_sDummy*,A); }
+
+inline ElDistMultiVec_d CReflect( DistMultiVec<double>* A )
+{ return (ElDistMultiVec_d)EL_RC(struct ElDistMultiVec_dDummy*,A); }
+
+inline ElDistMultiVec_c CReflect( DistMultiVec<Complex<float>>* A )
+{ return (ElDistMultiVec_c)EL_RC(struct ElDistMultiVec_cDummy*,A); }
+
+inline ElDistMultiVec_z CReflect( DistMultiVec<Complex<double>>* A )
+{ return (ElDistMultiVec_z)EL_RC(struct ElDistMultiVec_zDummy*,A); }
+
+inline ElConstDistMultiVec_i CReflect( const DistMultiVec<Int>* A )
+{ return (ElConstDistMultiVec_i)EL_RC(const struct ElDistMultiVec_iDummy*,A); }
+
+inline ElConstDistMultiVec_s CReflect( const DistMultiVec<float>* A )
+{ return (ElConstDistMultiVec_s)EL_RC(const struct ElDistMultiVec_sDummy*,A); }
+
+inline ElConstDistMultiVec_d CReflect( const DistMultiVec<double>* A )
+{ return (ElConstDistMultiVec_d)EL_RC(const struct ElDistMultiVec_dDummy*,A); }
+
+inline ElConstDistMultiVec_c CReflect( const DistMultiVec<Complex<float>>* A )
+{ return (ElConstDistMultiVec_c)EL_RC(const struct ElDistMultiVec_cDummy*,A); }
+
+inline ElConstDistMultiVec_z CReflect( const DistMultiVec<Complex<double>>* A )
+{ return (ElConstDistMultiVec_z)EL_RC(const struct ElDistMultiVec_zDummy*,A); }
+
 inline ElDistData CReflect( const DistData& data )
 {
     ElDistData distData;
@@ -510,6 +765,26 @@ inline ElGemmAlgorithm CReflect( GemmAlgorithm alg )
 inline GemmAlgorithm CReflect( ElGemmAlgorithm alg )
 { return static_cast<GemmAlgorithm>(alg); }
 
+template<typename T>
+inline ElSymvCtrl
+CReflect( const SymvCtrl<T>& ctrl )
+{ 
+    ElSymvCtrl ctrlC;
+    ctrlC.bsize = ctrl.bsize;
+    ctrlC.avoidTrmvBasedLocalSymv = ctrl.avoidTrmvBasedLocalSymv;
+    return ctrlC;
+}
+
+template<typename T>
+inline SymvCtrl<T>
+CReflect( const ElSymvCtrl& ctrlC )
+{ 
+    SymvCtrl<T> ctrl;
+    ctrl.bsize = ctrlC.bsize;
+    ctrl.avoidTrmvBasedLocalSymv = ctrlC.avoidTrmvBasedLocalSymv;
+    return ctrl;
+}
+
 // LAPACK-like
 // -----------
 
@@ -563,22 +838,22 @@ inline PermutationMeta CReflect( const ElPermutationMeta& metaC )
     int commSize;
     MPI_Comm_size( metaC.comm, &commSize );
     meta.sendCounts = 
-        std::vector<int>( metaC.sendCounts, metaC.sendCounts+commSize );
+        vector<int>( metaC.sendCounts, metaC.sendCounts+commSize );
     meta.sendDispls = 
-        std::vector<int>( metaC.sendDispls, metaC.sendDispls+commSize );
+        vector<int>( metaC.sendDispls, metaC.sendDispls+commSize );
     meta.recvCounts =
-        std::vector<int>( metaC.recvCounts, metaC.recvCounts+commSize );
+        vector<int>( metaC.recvCounts, metaC.recvCounts+commSize );
     meta.recvDispls =
-        std::vector<int>( metaC.recvDispls, metaC.recvDispls+commSize );
+        vector<int>( metaC.recvDispls, metaC.recvDispls+commSize );
 
     meta.sendIdx = 
-        std::vector<int>( metaC.sendIdx, metaC.sendIdx+metaC.numSendIdx );
+        vector<int>( metaC.sendIdx, metaC.sendIdx+metaC.numSendIdx );
     meta.sendRanks =
-        std::vector<int>( metaC.sendRanks, metaC.sendRanks+metaC.numSendIdx );
+        vector<int>( metaC.sendRanks, metaC.sendRanks+metaC.numSendIdx );
     meta.recvIdx =
-        std::vector<int>( metaC.recvIdx, metaC.recvIdx+metaC.numRecvIdx );
+        vector<int>( metaC.recvIdx, metaC.recvIdx+metaC.numRecvIdx );
     meta.recvRanks =
-        std::vector<int>( metaC.recvRanks, metaC.recvRanks+metaC.numRecvIdx );
+        vector<int>( metaC.recvRanks, metaC.recvRanks+metaC.numRecvIdx );
 
     return meta;
 }
@@ -593,21 +868,25 @@ inline HermitianTridiagApproach
 CReflect( ElHermitianTridiagApproach approach )
 { return static_cast<HermitianTridiagApproach>( approach ); }
 
+template<typename F>
 inline ElHermitianTridiagCtrl
-CReflect( const HermitianTridiagCtrl& ctrl )
+CReflect( const HermitianTridiagCtrl<F>& ctrl )
 { 
     ElHermitianTridiagCtrl ctrlC;
     ctrlC.approach = CReflect(ctrl.approach);
     ctrlC.order = CReflect(ctrl.order);
+    ctrlC.symvCtrl = CReflect(ctrl.symvCtrl);
     return ctrlC;
 }
 
-inline HermitianTridiagCtrl
+template<typename F>
+inline HermitianTridiagCtrl<F>
 CReflect( const ElHermitianTridiagCtrl& ctrlC )
 { 
-    HermitianTridiagCtrl ctrl;
+    HermitianTridiagCtrl<F> ctrl;
     ctrl.approach = CReflect(ctrlC.approach);
     ctrl.order = CReflect(ctrlC.order);
+    ctrl.symvCtrl = CReflect<F>(ctrlC.symvCtrl);
     return ctrl;
 }
 
@@ -728,9 +1007,28 @@ inline ElHermitianEigCtrl_s CReflect( const HermitianEigCtrl<float>& ctrl )
     ctrlC.useSDC = ctrl.useSDC;
     return ctrlC;
 }
+
 inline ElHermitianEigCtrl_d CReflect( const HermitianEigCtrl<double>& ctrl )
 {
     ElHermitianEigCtrl_d ctrlC;
+    ctrlC.tridiagCtrl = CReflect( ctrl.tridiagCtrl );
+    ctrlC.sdcCtrl = CReflect( ctrl.sdcCtrl );
+    ctrlC.useSDC = ctrl.useSDC;
+    return ctrlC;
+}
+inline ElHermitianEigCtrl_c 
+CReflect( const HermitianEigCtrl<Complex<float>>& ctrl )
+{
+    ElHermitianEigCtrl_c ctrlC;
+    ctrlC.tridiagCtrl = CReflect( ctrl.tridiagCtrl );
+    ctrlC.sdcCtrl = CReflect( ctrl.sdcCtrl );
+    ctrlC.useSDC = ctrl.useSDC;
+    return ctrlC;
+}
+inline ElHermitianEigCtrl_z
+CReflect( const HermitianEigCtrl<Complex<double>>& ctrl )
+{
+    ElHermitianEigCtrl_z ctrlC;
     ctrlC.tridiagCtrl = CReflect( ctrl.tridiagCtrl );
     ctrlC.sdcCtrl = CReflect( ctrl.sdcCtrl );
     ctrlC.useSDC = ctrl.useSDC;
@@ -740,7 +1038,7 @@ inline ElHermitianEigCtrl_d CReflect( const HermitianEigCtrl<double>& ctrl )
 inline HermitianEigCtrl<float> CReflect( const ElHermitianEigCtrl_s& ctrlC )
 {
     HermitianEigCtrl<float> ctrl;
-    ctrl.tridiagCtrl = CReflect( ctrlC.tridiagCtrl );
+    ctrl.tridiagCtrl = CReflect<float>( ctrlC.tridiagCtrl );
     ctrl.sdcCtrl = CReflect( ctrlC.sdcCtrl );
     ctrl.useSDC = ctrlC.useSDC;
     return ctrl;
@@ -748,7 +1046,25 @@ inline HermitianEigCtrl<float> CReflect( const ElHermitianEigCtrl_s& ctrlC )
 inline HermitianEigCtrl<double> CReflect( const ElHermitianEigCtrl_d& ctrlC )
 {
     HermitianEigCtrl<double> ctrl;
-    ctrl.tridiagCtrl = CReflect( ctrlC.tridiagCtrl );
+    ctrl.tridiagCtrl = CReflect<double>( ctrlC.tridiagCtrl );
+    ctrl.sdcCtrl = CReflect( ctrlC.sdcCtrl );
+    ctrl.useSDC = ctrlC.useSDC;
+    return ctrl;
+}
+inline HermitianEigCtrl<Complex<float>> 
+CReflect( const ElHermitianEigCtrl_c& ctrlC )
+{
+    HermitianEigCtrl<Complex<float>> ctrl;
+    ctrl.tridiagCtrl = CReflect<Complex<float>>( ctrlC.tridiagCtrl );
+    ctrl.sdcCtrl = CReflect( ctrlC.sdcCtrl );
+    ctrl.useSDC = ctrlC.useSDC;
+    return ctrl;
+}
+inline HermitianEigCtrl<Complex<double>> 
+CReflect( const ElHermitianEigCtrl_z& ctrlC )
+{
+    HermitianEigCtrl<Complex<double>> ctrl;
+    ctrl.tridiagCtrl = CReflect<Complex<double>>( ctrlC.tridiagCtrl );
     ctrl.sdcCtrl = CReflect( ctrlC.sdcCtrl );
     ctrl.useSDC = ctrlC.useSDC;
     return ctrl;
@@ -937,6 +1253,36 @@ inline ElLDLPivotType CReflect( LDLPivotType pivotType )
 inline LDLPivotType CReflect( ElLDLPivotType pivotType )
 { return static_cast<LDLPivotType>( pivotType ); }
 
+inline ElLDLPivotCtrl_s CReflect( const LDLPivotCtrl<float>& ctrl )
+{
+    ElLDLPivotCtrl_s ctrlC;
+    ctrlC.pivotType = CReflect(ctrl.pivotType);
+    ctrlC.gamma = ctrl.gamma;
+    return ctrlC;
+}
+inline ElLDLPivotCtrl_d CReflect( const LDLPivotCtrl<double>& ctrl )
+{
+    ElLDLPivotCtrl_d ctrlC;
+    ctrlC.pivotType = CReflect(ctrl.pivotType);
+    ctrlC.gamma = ctrl.gamma;
+    return ctrlC;
+}
+
+inline LDLPivotCtrl<float> CReflect( ElLDLPivotCtrl_s ctrlC )
+{
+    LDLPivotCtrl<float> ctrl;
+    ctrl.pivotType = CReflect(ctrlC.pivotType);
+    ctrl.gamma = ctrlC.gamma;
+    return ctrl;
+}
+inline LDLPivotCtrl<double> CReflect( ElLDLPivotCtrl_d ctrlC )
+{
+    LDLPivotCtrl<double> ctrl;
+    ctrl.pivotType = CReflect(ctrlC.pivotType);
+    ctrl.gamma = ctrlC.gamma;
+    return ctrl;
+}
+
 inline ElLDLPivot CReflect( const LDLPivot& pivot )
 {
     ElLDLPivot pivotC;
@@ -1016,6 +1362,123 @@ inline QRCtrl<double> CReflect( const ElQRCtrl_d& ctrlC )
     ctrl.adaptive = ctrlC.adaptive;
     ctrl.tol = ctrlC.tol;
     ctrl.alwaysRecomputeNorms = ctrlC.alwaysRecomputeNorms;
+    return ctrl;
+}
+
+inline RegQSDRefineAlg CReflect( ElRegQSDRefineAlg alg ) 
+{ return static_cast<RegQSDRefineAlg>(alg); }
+inline ElRegQSDRefineAlg CReflect( RegQSDRefineAlg alg )
+{ return static_cast<ElRegQSDRefineAlg>(alg); }
+
+inline ElRegQSDCtrl_s CReflect( const RegQSDCtrl<float>& ctrl )
+{
+    ElRegQSDCtrl_s ctrlC;
+    ctrlC.regPrimal    = ctrl.regPrimal;
+    ctrlC.regDual      = ctrl.regDual;
+    ctrlC.alg          = CReflect(ctrl.alg);
+    ctrlC.relTol       = ctrl.relTol;
+    ctrlC.relTolRefine = ctrl.relTolRefine;
+    ctrlC.maxRefineIts = ctrl.maxRefineIts;
+    ctrlC.restart      = ctrl.restart;
+    ctrlC.progress     = ctrl.progress;
+    ctrlC.time         = ctrl.time;
+    return ctrlC;
+}
+
+inline ElRegQSDCtrl_d CReflect( const RegQSDCtrl<double>& ctrl )
+{
+    ElRegQSDCtrl_d ctrlC;
+    ctrlC.regPrimal    = ctrl.regPrimal;
+    ctrlC.regDual      = ctrl.regDual;
+    ctrlC.alg          = CReflect(ctrl.alg);
+    ctrlC.relTol       = ctrl.relTol;
+    ctrlC.relTolRefine = ctrl.relTolRefine;
+    ctrlC.maxRefineIts = ctrl.maxRefineIts;
+    ctrlC.restart      = ctrl.restart;
+    ctrlC.progress     = ctrl.progress;
+    ctrlC.time         = ctrl.time;
+    return ctrlC;
+}
+
+inline RegQSDCtrl<float> CReflect( const ElRegQSDCtrl_s& ctrlC )
+{
+    RegQSDCtrl<float> ctrl;
+    ctrl.regPrimal    = ctrlC.regPrimal;
+    ctrl.regDual      = ctrlC.regDual;
+    ctrl.alg          = CReflect(ctrlC.alg);
+    ctrl.relTol       = ctrlC.relTol;
+    ctrl.relTolRefine = ctrlC.relTolRefine;
+    ctrl.maxRefineIts = ctrlC.maxRefineIts;
+    ctrl.restart      = ctrlC.restart;
+    ctrl.progress     = ctrlC.progress;
+    ctrl.time         = ctrlC.time;
+    return ctrl;
+}
+
+inline RegQSDCtrl<double> CReflect( const ElRegQSDCtrl_d& ctrlC )
+{
+    RegQSDCtrl<double> ctrl;
+    ctrl.regPrimal    = ctrlC.regPrimal;
+    ctrl.regDual      = ctrlC.regDual;
+    ctrl.alg          = CReflect(ctrlC.alg);
+    ctrl.relTol       = ctrlC.relTol;
+    ctrl.relTolRefine = ctrlC.relTolRefine;
+    ctrl.maxRefineIts = ctrlC.maxRefineIts;
+    ctrl.restart      = ctrlC.restart;
+    ctrl.progress     = ctrlC.progress;
+    ctrl.time         = ctrlC.time;
+    return ctrl;
+}
+
+inline ElLeastSquaresCtrl_s CReflect( const LeastSquaresCtrl<float>& ctrl )
+{
+    ElLeastSquaresCtrl_s ctrlC;
+    ctrlC.scaleTwoNorm = ctrl.scaleTwoNorm;
+    ctrlC.basisSize    = ctrl.basisSize;
+    ctrlC.alpha        = ctrl.alpha; 
+    ctrlC.qsdCtrl      = CReflect(ctrl.qsdCtrl);
+    ctrlC.equilibrate  = ctrl.equilibrate;
+    ctrlC.progress     = ctrl.progress;
+    ctrlC.time         = ctrl.time;
+    return ctrlC;
+}
+
+inline ElLeastSquaresCtrl_d CReflect( const LeastSquaresCtrl<double>& ctrl )
+{
+    ElLeastSquaresCtrl_d ctrlC;
+    ctrlC.scaleTwoNorm = ctrl.scaleTwoNorm;
+    ctrlC.basisSize    = ctrl.basisSize;
+    ctrlC.alpha        = ctrl.alpha; 
+    ctrlC.qsdCtrl      = CReflect(ctrl.qsdCtrl);
+    ctrlC.equilibrate  = ctrl.equilibrate;
+    ctrlC.progress     = ctrl.progress;
+    ctrlC.time         = ctrl.time;
+    return ctrlC;
+}
+
+inline LeastSquaresCtrl<float> CReflect( const ElLeastSquaresCtrl_s& ctrlC )
+{
+    LeastSquaresCtrl<float> ctrl;
+    ctrl.scaleTwoNorm = ctrlC.scaleTwoNorm;
+    ctrl.basisSize    = ctrlC.basisSize;
+    ctrl.alpha        = ctrlC.alpha; 
+    ctrl.qsdCtrl      = CReflect(ctrlC.qsdCtrl);
+    ctrl.equilibrate  = ctrlC.equilibrate;
+    ctrl.progress     = ctrlC.progress;
+    ctrl.time         = ctrlC.time;
+    return ctrl;
+}
+
+inline LeastSquaresCtrl<double> CReflect( const ElLeastSquaresCtrl_d& ctrlC )
+{
+    LeastSquaresCtrl<double> ctrl;
+    ctrl.scaleTwoNorm = ctrlC.scaleTwoNorm;
+    ctrl.basisSize    = ctrlC.basisSize;
+    ctrl.alpha        = ctrlC.alpha; 
+    ctrl.qsdCtrl      = CReflect(ctrlC.qsdCtrl);
+    ctrl.equilibrate  = ctrlC.equilibrate;
+    ctrl.progress     = ctrlC.progress;
+    ctrl.time         = ctrlC.time;
     return ctrl;
 }
 
@@ -1146,6 +1609,42 @@ inline PseudospecCtrl<double> CReflect( const ElPseudospecCtrl_d& ctrlC )
     return ctrl;
 }
 
+inline ElSpectralBox_s CReflect( const SpectralBox<float>& box )
+{
+    ElSpectralBox_s boxC;
+    boxC.center = CReflect(box.center);
+    boxC.realWidth = box.realWidth;
+    boxC.imagWidth = box.imagWidth;
+    return boxC;
+}
+
+inline ElSpectralBox_d CReflect( const SpectralBox<double>& box )
+{
+    ElSpectralBox_d boxC;
+    boxC.center = CReflect(box.center);
+    boxC.realWidth = box.realWidth;
+    boxC.imagWidth = box.imagWidth;
+    return boxC;
+}
+
+inline SpectralBox<float> CReflect( const ElSpectralBox_s boxC )
+{
+    SpectralBox<float> box;
+    box.center = CReflect(boxC.center);
+    box.realWidth = CReflect(boxC.realWidth);
+    box.imagWidth = CReflect(boxC.imagWidth);
+    return box;
+}
+
+inline SpectralBox<double> CReflect( const ElSpectralBox_d boxC )
+{
+    SpectralBox<double> box;
+    box.center = CReflect(boxC.center);
+    box.realWidth = CReflect(boxC.realWidth);
+    box.imagWidth = CReflect(boxC.imagWidth);
+    return box;
+}
+
 // Solvers
 // ^^^^^^^
 inline ElTikhonovAlg CReflect( TikhonovAlg alg )
@@ -1164,6 +1663,951 @@ inline ElRegularization CReflect( Regularization penalty )
 { return static_cast<ElRegularization>(penalty); }
 inline Regularization CReflect( ElRegularization penalty )
 { return static_cast<Regularization>(penalty); }
+
+inline ElKKTSystem CReflect( KKTSystem system )
+{ return static_cast<ElKKTSystem>(system); }
+inline KKTSystem CReflect( ElKKTSystem system )
+{ return static_cast<KKTSystem>(system); }
+
+/* Infeasible Path-following IPM
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ */
+inline ElIPFLineSearchCtrl_s CReflect( const IPFLineSearchCtrl<float>& ctrl )
+{
+    ElIPFLineSearchCtrl_s ctrlC;
+    ctrlC.gamma     = ctrl.gamma;
+    ctrlC.beta      = ctrl.beta;
+    ctrlC.psi       = ctrl.psi;
+    ctrlC.stepRatio = ctrl.stepRatio;
+    ctrlC.print     = ctrl.print;
+    return ctrlC;
+}
+inline ElIPFLineSearchCtrl_d CReflect( const IPFLineSearchCtrl<double>& ctrl )
+{
+    ElIPFLineSearchCtrl_d ctrlC;
+    ctrlC.gamma     = ctrl.gamma;
+    ctrlC.beta      = ctrl.beta;
+    ctrlC.psi       = ctrl.psi;
+    ctrlC.stepRatio = ctrl.stepRatio;
+    ctrlC.print     = ctrl.print;
+    return ctrlC;
+}
+inline IPFLineSearchCtrl<float> CReflect( ElIPFLineSearchCtrl_s ctrlC )
+{
+    IPFLineSearchCtrl<float> ctrl;
+    ctrl.gamma     = ctrlC.gamma;
+    ctrl.beta      = ctrlC.beta;
+    ctrl.psi       = ctrlC.psi;
+    ctrl.stepRatio = ctrlC.stepRatio;
+    ctrl.print     = ctrlC.print;
+    return ctrl;
+}
+inline IPFLineSearchCtrl<double> CReflect( ElIPFLineSearchCtrl_d ctrlC )
+{
+    IPFLineSearchCtrl<double> ctrl;
+    ctrl.gamma     = ctrlC.gamma;
+    ctrl.beta      = ctrlC.beta;
+    ctrl.psi       = ctrlC.psi;
+    ctrl.stepRatio = ctrlC.stepRatio;
+    ctrl.print     = ctrlC.print;
+    return ctrl;
+}
+
+inline ElIPFCtrl_s CReflect( const IPFCtrl<float>& ctrl )
+{
+    ElIPFCtrl_s ctrlC;
+    ctrlC.primalInit     = ctrl.primalInit;
+    ctrlC.dualInit       = ctrl.dualInit;
+    ctrlC.minTol         = ctrl.minTol;
+    ctrlC.targetTol      = ctrl.targetTol;
+    ctrlC.maxIts         = ctrl.maxIts;
+    ctrlC.centering      = ctrl.centering;
+    ctrlC.system         = CReflect(ctrl.system);
+    ctrlC.lineSearchCtrl = CReflect(ctrl.lineSearchCtrl);
+    ctrlC.qsdCtrl        = CReflect(ctrl.qsdCtrl);
+    ctrlC.outerEquil     = ctrl.outerEquil;
+    ctrlC.innerEquil     = ctrl.innerEquil;
+    ctrlC.basisSize      = ctrl.basisSize;
+    ctrlC.print          = ctrl.print;
+    ctrlC.time           = ctrl.time;
+    return ctrlC;
+}
+inline ElIPFCtrl_d CReflect( const IPFCtrl<double>& ctrl )
+{
+    ElIPFCtrl_d ctrlC;
+    ctrlC.primalInit     = ctrl.primalInit;
+    ctrlC.dualInit       = ctrl.dualInit;
+    ctrlC.minTol         = ctrl.minTol;
+    ctrlC.targetTol      = ctrl.targetTol;
+    ctrlC.maxIts         = ctrl.maxIts;
+    ctrlC.centering      = ctrl.centering;
+    ctrlC.system         = CReflect(ctrl.system);
+    ctrlC.lineSearchCtrl = CReflect(ctrl.lineSearchCtrl);
+    ctrlC.qsdCtrl        = CReflect(ctrl.qsdCtrl);
+    ctrlC.outerEquil     = ctrl.outerEquil;
+    ctrlC.innerEquil     = ctrl.innerEquil;
+    ctrlC.basisSize      = ctrl.basisSize;
+    ctrlC.print          = ctrl.print;
+    ctrlC.time           = ctrl.time;
+    return ctrlC;
+}
+inline IPFCtrl<float> CReflect( ElIPFCtrl_s ctrlC )
+{
+    IPFCtrl<float> ctrl;
+    ctrl.primalInit     = ctrlC.primalInit;
+    ctrl.dualInit       = ctrlC.dualInit;
+    ctrl.minTol         = ctrlC.minTol;
+    ctrl.targetTol      = ctrlC.targetTol;
+    ctrl.maxIts         = ctrlC.maxIts;
+    ctrl.centering      = ctrlC.centering;
+    ctrl.system         = CReflect(ctrlC.system);
+    ctrl.lineSearchCtrl = CReflect(ctrlC.lineSearchCtrl);
+    ctrl.qsdCtrl        = CReflect(ctrlC.qsdCtrl);
+    ctrl.outerEquil     = ctrlC.outerEquil;
+    ctrl.innerEquil     = ctrlC.innerEquil;
+    ctrl.basisSize      = ctrlC.basisSize;
+    ctrl.print          = ctrlC.print;
+    ctrl.time           = ctrlC.time;
+    return ctrl;
+}
+inline IPFCtrl<double> CReflect( ElIPFCtrl_d ctrlC )
+{
+    IPFCtrl<double> ctrl;
+    ctrl.primalInit     = ctrlC.primalInit;
+    ctrl.dualInit       = ctrlC.dualInit;
+    ctrl.minTol         = ctrlC.minTol;
+    ctrl.targetTol      = ctrlC.targetTol;
+    ctrl.maxIts         = ctrlC.maxIts;
+    ctrl.centering      = ctrlC.centering;
+    ctrl.system         = CReflect(ctrlC.system);
+    ctrl.lineSearchCtrl = CReflect(ctrlC.lineSearchCtrl);
+    ctrl.qsdCtrl        = CReflect(ctrlC.qsdCtrl);
+    ctrl.outerEquil     = ctrlC.outerEquil;
+    ctrl.innerEquil     = ctrlC.innerEquil;
+    ctrl.basisSize      = ctrlC.basisSize;
+    ctrl.print          = ctrlC.print;
+    ctrl.time           = ctrlC.time;
+    return ctrl;
+}
+
+/* Mehrotra's Predictor-Corrector IPM
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ */
+inline ElMehrotraCtrl_s CReflect( const MehrotraCtrl<float>& ctrl )
+{
+    ElMehrotraCtrl_s ctrlC;
+    ctrlC.primalInit   = ctrl.primalInit;
+    ctrlC.dualInit     = ctrl.dualInit;
+    ctrlC.minTol       = ctrl.minTol;
+    ctrlC.targetTol    = ctrl.targetTol;
+    ctrlC.maxIts       = ctrl.maxIts;
+    ctrlC.maxStepRatio = ctrl.maxStepRatio;
+    ctrlC.system       = CReflect(ctrl.system);
+    ctrlC.qsdCtrl      = CReflect(ctrl.qsdCtrl);
+    ctrlC.outerEquil   = ctrl.outerEquil;
+    ctrlC.innerEquil   = ctrl.innerEquil;
+    ctrlC.basisSize    = ctrl.basisSize;
+    ctrlC.print        = ctrl.print;
+    ctrlC.time         = ctrl.time;
+    return ctrlC;
+}
+inline ElMehrotraCtrl_d CReflect( const MehrotraCtrl<double>& ctrl )
+{
+    ElMehrotraCtrl_d ctrlC;
+    ctrlC.primalInit   = ctrl.primalInit;
+    ctrlC.dualInit     = ctrl.dualInit;
+    ctrlC.minTol       = ctrl.minTol;
+    ctrlC.targetTol    = ctrl.targetTol;
+    ctrlC.maxIts       = ctrl.maxIts;
+    ctrlC.maxStepRatio = ctrl.maxStepRatio;
+    ctrlC.system       = CReflect(ctrl.system);
+    ctrlC.qsdCtrl      = CReflect(ctrl.qsdCtrl);
+    ctrlC.outerEquil   = ctrl.outerEquil;
+    ctrlC.innerEquil   = ctrl.innerEquil;
+    ctrlC.basisSize    = ctrl.basisSize;
+    ctrlC.print        = ctrl.print;
+    ctrlC.time         = ctrl.time;
+    return ctrlC;
+}
+inline MehrotraCtrl<float> CReflect( ElMehrotraCtrl_s ctrlC )
+{
+    MehrotraCtrl<float> ctrl;
+    ctrl.primalInit   = ctrlC.primalInit;
+    ctrl.dualInit     = ctrlC.dualInit;
+    ctrl.minTol       = ctrlC.minTol;
+    ctrl.targetTol    = ctrlC.targetTol;
+    ctrl.maxIts       = ctrlC.maxIts;
+    ctrl.maxStepRatio = ctrlC.maxStepRatio;
+    ctrl.system       = CReflect(ctrlC.system);
+    ctrl.qsdCtrl      = CReflect(ctrlC.qsdCtrl);
+    ctrl.outerEquil   = ctrlC.outerEquil;
+    ctrl.innerEquil   = ctrlC.innerEquil;
+    ctrl.basisSize    = ctrlC.basisSize;
+    ctrl.print        = ctrlC.print;
+    ctrl.time         = ctrlC.time;
+    return ctrl;
+}
+inline MehrotraCtrl<double> CReflect( ElMehrotraCtrl_d ctrlC )
+{
+    MehrotraCtrl<double> ctrl;
+    ctrl.primalInit   = ctrlC.primalInit;
+    ctrl.dualInit     = ctrlC.dualInit;
+    ctrl.minTol       = ctrlC.minTol;
+    ctrl.targetTol    = ctrlC.targetTol;
+    ctrl.maxIts       = ctrlC.maxIts;
+    ctrl.maxStepRatio = ctrlC.maxStepRatio;
+    ctrl.system       = CReflect(ctrlC.system);
+    ctrl.qsdCtrl      = CReflect(ctrlC.qsdCtrl);
+    ctrl.outerEquil   = ctrlC.outerEquil;
+    ctrl.innerEquil   = ctrlC.innerEquil;
+    ctrl.basisSize    = ctrlC.basisSize;
+    ctrl.print        = ctrlC.print;
+    ctrl.time         = ctrlC.time;
+    return ctrl;
+}
+
+/* Alternating Direction Method of Multipliers
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ */
+inline ElADMMCtrl_s CReflect( const ADMMCtrl<float>& ctrl )
+{
+    ElADMMCtrl_s ctrlC;
+    ctrlC.rho     = ctrl.rho;
+    ctrlC.alpha   = ctrl.alpha;
+    ctrlC.maxIter = ctrl.maxIter;
+    ctrlC.absTol  = ctrl.absTol;
+    ctrlC.relTol  = ctrl.relTol;
+    ctrlC.inv     = ctrl.inv;
+    ctrlC.print   = ctrl.print;
+    return ctrlC;
+}
+inline ElADMMCtrl_d CReflect( const ADMMCtrl<double>& ctrl )
+{
+    ElADMMCtrl_d ctrlC;
+    ctrlC.rho     = ctrl.rho;
+    ctrlC.alpha   = ctrl.alpha;
+    ctrlC.maxIter = ctrl.maxIter;
+    ctrlC.absTol  = ctrl.absTol;
+    ctrlC.relTol  = ctrl.relTol;
+    ctrlC.inv     = ctrl.inv;
+    ctrlC.print   = ctrl.print;
+    return ctrlC;
+}
+inline ADMMCtrl<float> CReflect( ElADMMCtrl_s ctrlC )
+{
+    ADMMCtrl<float> ctrl;
+    ctrl.rho     = ctrlC.rho;
+    ctrl.alpha   = ctrlC.alpha;
+    ctrl.maxIter = ctrlC.maxIter;
+    ctrl.absTol  = ctrlC.absTol;
+    ctrl.relTol  = ctrlC.relTol;
+    ctrl.inv     = ctrlC.inv;
+    ctrl.print   = ctrlC.print;
+    return ctrl;
+}
+inline ADMMCtrl<double> CReflect( ElADMMCtrl_d ctrlC )
+{
+    ADMMCtrl<double> ctrl;
+    ctrl.rho     = ctrlC.rho;
+    ctrl.alpha   = ctrlC.alpha;
+    ctrl.maxIter = ctrlC.maxIter;
+    ctrl.absTol  = ctrlC.absTol;
+    ctrl.relTol  = ctrlC.relTol;
+    ctrl.inv     = ctrlC.inv;
+    ctrl.print   = ctrlC.print;
+    return ctrl;
+}
+
+/* Linear programs
+   ^^^^^^^^^^^^^^^ */
+inline ElLPApproach CReflect( LPApproach approach )
+{ return static_cast<ElLPApproach>(approach); }
+inline LPApproach CReflect( ElLPApproach approach )
+{ return static_cast<LPApproach>(approach); }
+
+/* Direct conic form
+   """"""""""""""""" */
+inline ElLPDirectCtrl_s CReflect( const lp::direct::Ctrl<float>& ctrl )
+{
+    ElLPDirectCtrl_s ctrlC;
+    ctrlC.approach     = CReflect(ctrl.approach);
+    ctrlC.admmCtrl     = CReflect(ctrl.admmCtrl);
+    ctrlC.ipfCtrl      = CReflect(ctrl.ipfCtrl);
+    ctrlC.mehrotraCtrl = CReflect(ctrl.mehrotraCtrl);
+    return ctrlC;
+}
+inline ElLPDirectCtrl_d CReflect( const lp::direct::Ctrl<double>& ctrl )
+{
+    ElLPDirectCtrl_d ctrlC;
+    ctrlC.approach     = CReflect(ctrl.approach);
+    ctrlC.admmCtrl     = CReflect(ctrl.admmCtrl);
+    ctrlC.ipfCtrl      = CReflect(ctrl.ipfCtrl);
+    ctrlC.mehrotraCtrl = CReflect(ctrl.mehrotraCtrl);
+    return ctrlC;
+}
+inline lp::direct::Ctrl<float> CReflect( ElLPDirectCtrl_s ctrlC )
+{
+    lp::direct::Ctrl<float> ctrl(false);
+    ctrl.approach     = CReflect(ctrlC.approach);
+    ctrl.admmCtrl     = CReflect(ctrlC.admmCtrl);
+    ctrl.ipfCtrl      = CReflect(ctrlC.ipfCtrl);
+    ctrl.mehrotraCtrl = CReflect(ctrlC.mehrotraCtrl);
+    return ctrl;
+}
+inline lp::direct::Ctrl<double> CReflect( ElLPDirectCtrl_d ctrlC )
+{
+    lp::direct::Ctrl<double> ctrl(false);
+    ctrl.approach     = CReflect(ctrlC.approach);
+    ctrl.admmCtrl     = CReflect(ctrlC.admmCtrl);
+    ctrl.ipfCtrl      = CReflect(ctrlC.ipfCtrl);
+    ctrl.mehrotraCtrl = CReflect(ctrlC.mehrotraCtrl);
+    return ctrl;
+}
+
+/* Affine conic form
+   """"""""""""""""" */
+inline ElLPAffineCtrl_s CReflect( const lp::affine::Ctrl<float>& ctrl )
+{
+    ElLPAffineCtrl_s ctrlC;
+    ctrlC.approach     = CReflect(ctrl.approach);
+    ctrlC.ipfCtrl      = CReflect(ctrl.ipfCtrl);
+    ctrlC.mehrotraCtrl = CReflect(ctrl.mehrotraCtrl);
+    return ctrlC;
+}
+inline ElLPAffineCtrl_d CReflect( const lp::affine::Ctrl<double>& ctrl )
+{
+    ElLPAffineCtrl_d ctrlC;
+    ctrlC.approach     = CReflect(ctrl.approach);
+    ctrlC.ipfCtrl      = CReflect(ctrl.ipfCtrl);
+    ctrlC.mehrotraCtrl = CReflect(ctrl.mehrotraCtrl);
+    return ctrlC;
+}
+inline lp::affine::Ctrl<float> CReflect( ElLPAffineCtrl_s ctrlC )
+{
+    lp::affine::Ctrl<float> ctrl;
+    ctrl.approach     = CReflect(ctrlC.approach);
+    ctrl.ipfCtrl      = CReflect(ctrlC.ipfCtrl);
+    ctrl.mehrotraCtrl = CReflect(ctrlC.mehrotraCtrl);
+    return ctrl;
+}
+inline lp::affine::Ctrl<double> CReflect( ElLPAffineCtrl_d ctrlC )
+{
+    lp::affine::Ctrl<double> ctrl;
+    ctrl.approach     = CReflect(ctrlC.approach);
+    ctrl.ipfCtrl      = CReflect(ctrlC.ipfCtrl);
+    ctrl.mehrotraCtrl = CReflect(ctrlC.mehrotraCtrl);
+    return ctrl;
+}
+
+/* Quadratic programs
+   ^^^^^^^^^^^^^^^^^^ */
+inline ElQPApproach CReflect( QPApproach approach )
+{ return static_cast<ElQPApproach>(approach); }
+inline QPApproach CReflect( ElQPApproach approach )
+{ return static_cast<QPApproach>(approach); }
+
+/* Direct conic form
+   """"""""""""""""" */
+inline ElQPDirectCtrl_s CReflect( const qp::direct::Ctrl<float>& ctrl )
+{
+    ElQPDirectCtrl_s ctrlC;
+    ctrlC.approach     = CReflect(ctrl.approach);
+    ctrlC.ipfCtrl      = CReflect(ctrl.ipfCtrl);
+    ctrlC.mehrotraCtrl = CReflect(ctrl.mehrotraCtrl);
+    return ctrlC;
+}
+inline ElQPDirectCtrl_d CReflect( const qp::direct::Ctrl<double>& ctrl )
+{
+    ElQPDirectCtrl_d ctrlC;
+    ctrlC.approach     = CReflect(ctrl.approach);
+    ctrlC.ipfCtrl      = CReflect(ctrl.ipfCtrl);
+    ctrlC.mehrotraCtrl = CReflect(ctrl.mehrotraCtrl);
+    return ctrlC;
+}
+inline qp::direct::Ctrl<float> CReflect( ElQPDirectCtrl_s ctrlC )
+{
+    qp::direct::Ctrl<float> ctrl;
+    ctrl.approach     = CReflect(ctrlC.approach);
+    ctrl.ipfCtrl      = CReflect(ctrlC.ipfCtrl);
+    ctrl.mehrotraCtrl = CReflect(ctrlC.mehrotraCtrl);
+    return ctrl;
+}
+inline qp::direct::Ctrl<double> CReflect( ElQPDirectCtrl_d ctrlC )
+{
+    qp::direct::Ctrl<double> ctrl;
+    ctrl.approach     = CReflect(ctrlC.approach);
+    ctrl.ipfCtrl      = CReflect(ctrlC.ipfCtrl);
+    ctrl.mehrotraCtrl = CReflect(ctrlC.mehrotraCtrl);
+    return ctrl;
+}
+
+/* Affine conic form
+   """"""""""""""""" */
+inline ElQPAffineCtrl_s CReflect( const qp::affine::Ctrl<float>& ctrl )
+{
+    ElQPAffineCtrl_s ctrlC;
+    ctrlC.approach     = CReflect(ctrl.approach);
+    ctrlC.ipfCtrl      = CReflect(ctrl.ipfCtrl);
+    ctrlC.mehrotraCtrl = CReflect(ctrl.mehrotraCtrl);
+    return ctrlC;
+}
+inline ElQPAffineCtrl_d CReflect( const qp::affine::Ctrl<double>& ctrl )
+{
+    ElQPAffineCtrl_d ctrlC;
+    ctrlC.approach     = CReflect(ctrl.approach);
+    ctrlC.ipfCtrl      = CReflect(ctrl.ipfCtrl);
+    ctrlC.mehrotraCtrl = CReflect(ctrl.mehrotraCtrl);
+    return ctrlC;
+}
+inline qp::affine::Ctrl<float> CReflect( ElQPAffineCtrl_s ctrlC )
+{
+    qp::affine::Ctrl<float> ctrl;
+    ctrl.approach     = CReflect(ctrlC.approach);
+    ctrl.ipfCtrl      = CReflect(ctrlC.ipfCtrl);
+    ctrl.mehrotraCtrl = CReflect(ctrlC.mehrotraCtrl);
+    return ctrl;
+}
+inline qp::affine::Ctrl<double> CReflect( ElQPAffineCtrl_d ctrlC )
+{
+    qp::affine::Ctrl<double> ctrl;
+    ctrl.approach     = CReflect(ctrlC.approach);
+    ctrl.ipfCtrl      = CReflect(ctrlC.ipfCtrl);
+    ctrl.mehrotraCtrl = CReflect(ctrlC.mehrotraCtrl);
+    return ctrl;
+}
+
+/* Second-order cone programs
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^ */
+inline ElSOCPApproach CReflect( SOCPApproach approach )
+{ return static_cast<ElSOCPApproach>(approach); }
+inline SOCPApproach CReflect( ElSOCPApproach approach )
+{ return static_cast<SOCPApproach>(approach); }
+
+/* Direct conic form
+   """"""""""""""""" */
+inline ElSOCPDirectCtrl_s CReflect( const socp::direct::Ctrl<float>& ctrl )
+{
+    ElSOCPDirectCtrl_s ctrlC;
+    ctrlC.approach     = CReflect(ctrl.approach);
+    ctrlC.mehrotraCtrl = CReflect(ctrl.mehrotraCtrl);
+    return ctrlC;
+}
+inline ElSOCPDirectCtrl_d CReflect( const socp::direct::Ctrl<double>& ctrl )
+{
+    ElSOCPDirectCtrl_d ctrlC;
+    ctrlC.approach     = CReflect(ctrl.approach);
+    ctrlC.mehrotraCtrl = CReflect(ctrl.mehrotraCtrl);
+    return ctrlC;
+}
+inline socp::direct::Ctrl<float> CReflect( ElSOCPDirectCtrl_s ctrlC )
+{
+    socp::direct::Ctrl<float> ctrl;
+    ctrl.approach     = CReflect(ctrlC.approach);
+    ctrl.mehrotraCtrl = CReflect(ctrlC.mehrotraCtrl);
+    return ctrl;
+}
+inline socp::direct::Ctrl<double> CReflect( ElSOCPDirectCtrl_d ctrlC )
+{
+    socp::direct::Ctrl<double> ctrl;
+    ctrl.approach     = CReflect(ctrlC.approach);
+    ctrl.mehrotraCtrl = CReflect(ctrlC.mehrotraCtrl);
+    return ctrl;
+}
+
+/* Affine conic form
+   """"""""""""""""" */
+inline ElSOCPAffineCtrl_s CReflect( const socp::affine::Ctrl<float>& ctrl )
+{
+    ElSOCPAffineCtrl_s ctrlC;
+    ctrlC.approach     = CReflect(ctrl.approach);
+    ctrlC.mehrotraCtrl = CReflect(ctrl.mehrotraCtrl);
+    return ctrlC;
+}
+inline ElSOCPAffineCtrl_d CReflect( const socp::affine::Ctrl<double>& ctrl )
+{
+    ElSOCPAffineCtrl_d ctrlC;
+    ctrlC.approach     = CReflect(ctrl.approach);
+    ctrlC.mehrotraCtrl = CReflect(ctrl.mehrotraCtrl);
+    return ctrlC;
+}
+inline socp::affine::Ctrl<float> CReflect( ElSOCPAffineCtrl_s ctrlC )
+{
+    socp::affine::Ctrl<float> ctrl;
+    ctrl.approach     = CReflect(ctrlC.approach);
+    ctrl.mehrotraCtrl = CReflect(ctrlC.mehrotraCtrl);
+    return ctrl;
+}
+inline socp::affine::Ctrl<double> CReflect( ElSOCPAffineCtrl_d ctrlC )
+{
+    socp::affine::Ctrl<double> ctrl;
+    ctrl.approach     = CReflect(ctrlC.approach);
+    ctrl.mehrotraCtrl = CReflect(ctrlC.mehrotraCtrl);
+    return ctrl;
+}
+
+// Models
+// ^^^^^^
+
+// Basis Pursuit
+// """""""""""""
+inline ElBPADMMCtrl_s CReflect( const bp::ADMMCtrl<float>& ctrl )
+{
+    ElBPADMMCtrl_s ctrlC;
+    ctrlC.rho      = ctrl.rho;
+    ctrlC.alpha    = ctrl.alpha;
+    ctrlC.maxIter  = ctrl.maxIter;
+    ctrlC.absTol   = ctrl.absTol;
+    ctrlC.relTol   = ctrl.relTol;
+    ctrlC.usePinv  = ctrl.usePinv;
+    ctrlC.pinvTol  = ctrl.pinvTol;
+    ctrlC.progress = ctrl.progress;
+    return ctrlC;
+}
+
+inline ElBPADMMCtrl_d CReflect( const bp::ADMMCtrl<double>& ctrl )
+{
+    ElBPADMMCtrl_d ctrlC;
+    ctrlC.rho      = ctrl.rho;
+    ctrlC.alpha    = ctrl.alpha;
+    ctrlC.maxIter  = ctrl.maxIter;
+    ctrlC.absTol   = ctrl.absTol;
+    ctrlC.relTol   = ctrl.relTol;
+    ctrlC.usePinv  = ctrl.usePinv;
+    ctrlC.pinvTol  = ctrl.pinvTol;
+    ctrlC.progress = ctrl.progress;
+    return ctrlC;
+}
+
+inline bp::ADMMCtrl<float> CReflect( ElBPADMMCtrl_s ctrlC )
+{
+    bp::ADMMCtrl<float> ctrl;
+    ctrl.rho      = ctrlC.rho;
+    ctrl.alpha    = ctrlC.alpha;
+    ctrl.maxIter  = ctrlC.maxIter;
+    ctrl.absTol   = ctrlC.absTol;
+    ctrl.relTol   = ctrlC.relTol;
+    ctrl.usePinv  = ctrlC.usePinv;
+    ctrl.pinvTol  = ctrlC.pinvTol;
+    ctrl.progress = ctrlC.progress;
+    return ctrl;
+}
+
+inline bp::ADMMCtrl<double> CReflect( ElBPADMMCtrl_d ctrlC )
+{
+    bp::ADMMCtrl<double> ctrl;
+    ctrl.rho      = ctrlC.rho;
+    ctrl.alpha    = ctrlC.alpha;
+    ctrl.maxIter  = ctrlC.maxIter;
+    ctrl.absTol   = ctrlC.absTol;
+    ctrl.relTol   = ctrlC.relTol;
+    ctrl.usePinv  = ctrlC.usePinv;
+    ctrl.pinvTol  = ctrlC.pinvTol;
+    ctrl.progress = ctrlC.progress;
+    return ctrl;
+}
+
+inline ElBPCtrl_s CReflect( const BPCtrl<float>& ctrl )
+{
+    ElBPCtrl_s ctrlC;
+    ctrlC.useIPM      = ctrl.useIPM;
+    ctrlC.useSOCP     = ctrl.useSOCP;
+    ctrlC.admmCtrl    = CReflect(ctrl.admmCtrl);
+    ctrlC.lpIPMCtrl   = CReflect(ctrl.lpIPMCtrl);
+    ctrlC.socpIPMCtrl = CReflect(ctrl.socpIPMCtrl);
+    return ctrlC;
+}
+
+inline ElBPCtrl_d CReflect( const BPCtrl<double>& ctrl )
+{
+    ElBPCtrl_d ctrlC;
+    ctrlC.useIPM      = ctrl.useIPM;
+    ctrlC.useSOCP     = ctrl.useSOCP;
+    ctrlC.admmCtrl    = CReflect(ctrl.admmCtrl);
+    ctrlC.lpIPMCtrl   = CReflect(ctrl.lpIPMCtrl);
+    ctrlC.socpIPMCtrl = CReflect(ctrl.socpIPMCtrl);
+    return ctrlC;
+}
+
+inline ElBPCtrl_c CReflect( const BPCtrl<Complex<float>>& ctrl )
+{
+    ElBPCtrl_c ctrlC;
+    ctrlC.ipmCtrl = CReflect(ctrl.ipmCtrl);
+    return ctrlC;
+}
+
+inline ElBPCtrl_z CReflect( const BPCtrl<Complex<double>>& ctrl )
+{
+    ElBPCtrl_z ctrlC;
+    ctrlC.ipmCtrl = CReflect(ctrl.ipmCtrl);
+    return ctrlC;
+}
+
+inline BPCtrl<float> CReflect( ElBPCtrl_s ctrlC )
+{
+    BPCtrl<float> ctrl(false);
+    ctrl.useIPM      = ctrlC.useIPM;
+    ctrl.useSOCP     = ctrlC.useSOCP;
+    ctrl.admmCtrl    = CReflect(ctrlC.admmCtrl);
+    ctrl.lpIPMCtrl   = CReflect(ctrlC.lpIPMCtrl);
+    ctrl.socpIPMCtrl = CReflect(ctrlC.socpIPMCtrl);
+    return ctrl;
+}
+
+inline BPCtrl<double> CReflect( ElBPCtrl_d ctrlC )
+{
+    BPCtrl<double> ctrl(false);
+    ctrl.useIPM      = ctrlC.useIPM;
+    ctrl.useSOCP     = ctrlC.useSOCP;
+    ctrl.admmCtrl    = CReflect(ctrlC.admmCtrl);
+    ctrl.lpIPMCtrl   = CReflect(ctrlC.lpIPMCtrl);
+    ctrl.socpIPMCtrl = CReflect(ctrlC.socpIPMCtrl);
+    return ctrl;
+}
+
+inline BPCtrl<Complex<float>> CReflect( ElBPCtrl_c ctrlC )
+{
+    BPCtrl<Complex<float>> ctrl;
+    ctrl.ipmCtrl = CReflect(ctrlC.ipmCtrl);
+    return ctrl;
+}
+
+inline BPCtrl<Complex<double>> CReflect( ElBPCtrl_z ctrlC )
+{
+    BPCtrl<Complex<double>> ctrl;
+    ctrl.ipmCtrl = CReflect(ctrlC.ipmCtrl);
+    return ctrl;
+}
+
+
+// BPDN / LASSO
+// """"""""""""
+
+inline ElBPDNADMMCtrl_s CReflect( const bpdn::ADMMCtrl<float>& ctrl )
+{
+    ElBPDNADMMCtrl_s ctrlC;
+    ctrlC.rho      = ctrl.rho;
+    ctrlC.alpha    = ctrl.alpha;
+    ctrlC.maxIter  = ctrl.maxIter;
+    ctrlC.absTol   = ctrl.absTol;
+    ctrlC.relTol   = ctrl.relTol;
+    ctrlC.inv      = ctrl.inv;
+    ctrlC.progress = ctrl.progress;
+    return ctrlC;
+}
+
+inline ElBPDNADMMCtrl_d CReflect( const bpdn::ADMMCtrl<double>& ctrl )
+{
+    ElBPDNADMMCtrl_d ctrlC;
+    ctrlC.rho      = ctrl.rho;
+    ctrlC.alpha    = ctrl.alpha;
+    ctrlC.maxIter  = ctrl.maxIter;
+    ctrlC.absTol   = ctrl.absTol;
+    ctrlC.relTol   = ctrl.relTol;
+    ctrlC.inv      = ctrl.inv;
+    ctrlC.progress = ctrl.progress;
+    return ctrlC;
+}
+
+inline bpdn::ADMMCtrl<float> CReflect( ElBPDNADMMCtrl_s ctrlC )
+{
+    bpdn::ADMMCtrl<float> ctrl;
+    ctrl.rho      = ctrlC.rho;
+    ctrl.alpha    = ctrlC.alpha;
+    ctrl.maxIter  = ctrlC.maxIter;
+    ctrl.absTol   = ctrlC.absTol;
+    ctrl.relTol   = ctrlC.relTol;
+    ctrl.inv      = ctrlC.inv;
+    ctrl.progress = ctrlC.progress;
+    return ctrl;
+}
+
+inline bpdn::ADMMCtrl<double> CReflect( ElBPDNADMMCtrl_d ctrlC )
+{
+    bpdn::ADMMCtrl<double> ctrl;
+    ctrl.rho      = ctrlC.rho;
+    ctrl.alpha    = ctrlC.alpha;
+    ctrl.maxIter  = ctrlC.maxIter;
+    ctrl.absTol   = ctrlC.absTol;
+    ctrl.relTol   = ctrlC.relTol;
+    ctrl.inv      = ctrlC.inv;
+    ctrl.progress = ctrlC.progress;
+    return ctrl;
+}
+
+inline ElBPDNCtrl_s CReflect( const BPDNCtrl<float>& ctrl )
+{
+    ElBPDNCtrl_s ctrlC;
+    ctrlC.useIPM   = ctrl.useIPM;
+    ctrlC.admmCtrl = CReflect(ctrl.admmCtrl);
+    ctrlC.ipmCtrl  = CReflect(ctrl.ipmCtrl);
+    return ctrlC;
+}
+
+inline ElBPDNCtrl_d CReflect( const BPDNCtrl<double>& ctrl )
+{
+    ElBPDNCtrl_d ctrlC;
+    ctrlC.useIPM   = ctrl.useIPM;
+    ctrlC.admmCtrl = CReflect(ctrl.admmCtrl);
+    ctrlC.ipmCtrl  = CReflect(ctrl.ipmCtrl);
+    return ctrlC;
+}
+
+inline BPDNCtrl<float> CReflect( ElBPDNCtrl_s ctrlC )
+{
+    BPDNCtrl<float> ctrl;
+    ctrl.useIPM   = ctrlC.useIPM;
+    ctrl.admmCtrl = CReflect(ctrlC.admmCtrl);
+    ctrl.ipmCtrl  = CReflect(ctrlC.ipmCtrl);
+    return ctrl;
+}
+
+inline BPDNCtrl<double> CReflect( ElBPDNCtrl_d ctrlC )
+{
+    BPDNCtrl<double> ctrl;
+    ctrl.useIPM   = ctrlC.useIPM;
+    ctrl.admmCtrl = CReflect(ctrlC.admmCtrl);
+    ctrl.ipmCtrl  = CReflect(ctrlC.ipmCtrl);
+    return ctrl;
+}
+
+// Non-negative Least Squares
+// """"""""""""""""""""""""""
+
+inline NNLSApproach CReflect( ElNNLSApproach approach ) 
+{ return static_cast<NNLSApproach>(approach); }
+inline ElNNLSApproach CReflect( NNLSApproach approach )
+{ return static_cast<ElNNLSApproach>(approach); }
+
+inline ElNNLSCtrl_s CReflect( const NNLSCtrl<float>& ctrl )
+{
+    ElNNLSCtrl_s ctrlC;
+    ctrlC.approach = CReflect(ctrl.approach);
+    ctrlC.admmCtrl = CReflect(ctrl.admmCtrl);
+    ctrlC.qpCtrl   = CReflect(ctrl.qpCtrl);
+    ctrlC.socpCtrl = CReflect(ctrl.socpCtrl);
+    return ctrlC;
+}
+
+inline ElNNLSCtrl_d CReflect( const NNLSCtrl<double>& ctrl )
+{
+    ElNNLSCtrl_d ctrlC;
+    ctrlC.approach = CReflect(ctrl.approach);
+    ctrlC.admmCtrl = CReflect(ctrl.admmCtrl);
+    ctrlC.qpCtrl   = CReflect(ctrl.qpCtrl);
+    ctrlC.socpCtrl = CReflect(ctrl.socpCtrl);
+    return ctrlC;
+}
+
+inline NNLSCtrl<float> CReflect( ElNNLSCtrl_s ctrlC )
+{
+    NNLSCtrl<float> ctrl;
+    ctrl.approach = CReflect(ctrlC.approach);
+    ctrl.admmCtrl = CReflect(ctrlC.admmCtrl);
+    ctrl.qpCtrl   = CReflect(ctrlC.qpCtrl);
+    ctrl.socpCtrl = CReflect(ctrlC.socpCtrl);
+    return ctrl;
+}
+
+inline NNLSCtrl<double> CReflect( ElNNLSCtrl_d ctrlC )
+{
+    NNLSCtrl<double> ctrl;
+    ctrl.approach = CReflect(ctrlC.approach);
+    ctrl.admmCtrl = CReflect(ctrlC.admmCtrl);
+    ctrl.qpCtrl   = CReflect(ctrlC.qpCtrl);
+    ctrl.socpCtrl = CReflect(ctrlC.socpCtrl);
+    return ctrl;
+}
+
+// Robust Principal Component Analysis
+// """""""""""""""""""""""""""""""""""
+
+inline ElRPCACtrl_s CReflect( const RPCACtrl<float>& ctrl )
+{
+    ElRPCACtrl_s ctrlC;
+    ctrlC.useALM      = ctrl.useALM;
+    ctrlC.usePivQR    = ctrl.usePivQR;
+    ctrlC.progress    = ctrl.progress;
+    ctrlC.numPivSteps = ctrl.numPivSteps;
+    ctrlC.maxIts      = ctrl.maxIts;
+    ctrlC.tau         = ctrl.tau;
+    ctrlC.beta        = ctrl.beta;
+    ctrlC.rho         = ctrl.rho;
+    ctrlC.tol         = ctrl.tol;
+    return ctrlC;
+}
+
+inline ElRPCACtrl_d CReflect( const RPCACtrl<double>& ctrl )
+{
+    ElRPCACtrl_d ctrlC;
+    ctrlC.useALM      = ctrl.useALM;
+    ctrlC.usePivQR    = ctrl.usePivQR;
+    ctrlC.progress    = ctrl.progress;
+    ctrlC.numPivSteps = ctrl.numPivSteps;
+    ctrlC.maxIts      = ctrl.maxIts;
+    ctrlC.tau         = ctrl.tau;
+    ctrlC.beta        = ctrl.beta;
+    ctrlC.rho         = ctrl.rho;
+    ctrlC.tol         = ctrl.tol;
+    return ctrlC;
+}
+
+inline RPCACtrl<float> CReflect( const ElRPCACtrl_s ctrlC )
+{
+    RPCACtrl<float> ctrl;
+    ctrl.useALM      = ctrlC.useALM;
+    ctrl.usePivQR    = ctrlC.usePivQR;
+    ctrl.progress    = ctrlC.progress;
+    ctrl.numPivSteps = ctrlC.numPivSteps;
+    ctrl.maxIts      = ctrlC.maxIts;
+    ctrl.tau         = ctrlC.tau;
+    ctrl.beta        = ctrlC.beta;
+    ctrl.rho         = ctrlC.rho;
+    ctrl.tol         = ctrlC.tol;
+    return ctrl;
+}
+
+inline RPCACtrl<double> CReflect( const ElRPCACtrl_d ctrlC )
+{
+    RPCACtrl<double> ctrl;
+    ctrl.useALM      = ctrlC.useALM;
+    ctrl.usePivQR    = ctrlC.usePivQR;
+    ctrl.progress    = ctrlC.progress;
+    ctrl.numPivSteps = ctrlC.numPivSteps;
+    ctrl.maxIts      = ctrlC.maxIts;
+    ctrl.tau         = ctrlC.tau;
+    ctrl.beta        = ctrlC.beta;
+    ctrl.rho         = ctrlC.rho;
+    ctrl.tol         = ctrlC.tol;
+    return ctrl;
+}
+
+// Sparse inverse covariance selection
+// """""""""""""""""""""""""""""""""""
+
+inline ElSparseInvCovCtrl_s CReflect( const SparseInvCovCtrl<float>& ctrl )
+{
+    ElSparseInvCovCtrl_s ctrlC;
+    ctrlC.rho      = ctrl.rho;
+    ctrlC.alpha    = ctrl.alpha;
+    ctrlC.maxIter  = ctrl.maxIter;
+    ctrlC.absTol   = ctrl.absTol;
+    ctrlC.relTol   = ctrl.relTol;
+    ctrlC.progress = ctrl.progress;
+    return ctrlC;
+}
+
+inline ElSparseInvCovCtrl_d CReflect( const SparseInvCovCtrl<double>& ctrl )
+{
+    ElSparseInvCovCtrl_d ctrlC;
+    ctrlC.rho      = ctrl.rho;
+    ctrlC.alpha    = ctrl.alpha;
+    ctrlC.maxIter  = ctrl.maxIter;
+    ctrlC.absTol   = ctrl.absTol;
+    ctrlC.relTol   = ctrl.relTol;
+    ctrlC.progress = ctrl.progress;
+    return ctrlC;
+}
+
+inline SparseInvCovCtrl<float> CReflect( const ElSparseInvCovCtrl_s ctrlC )
+{
+    SparseInvCovCtrl<float> ctrl;
+    ctrl.rho      = ctrlC.rho;
+    ctrl.alpha    = ctrlC.alpha;
+    ctrl.maxIter  = ctrlC.maxIter;
+    ctrl.absTol   = ctrlC.absTol;
+    ctrl.relTol   = ctrlC.relTol;
+    ctrl.progress = ctrlC.progress;
+    return ctrl;
+}
+
+inline SparseInvCovCtrl<double> CReflect( const ElSparseInvCovCtrl_d ctrlC )
+{
+    SparseInvCovCtrl<double> ctrl;
+    ctrl.rho      = ctrlC.rho;
+    ctrl.alpha    = ctrlC.alpha;
+    ctrl.maxIter  = ctrlC.maxIter;
+    ctrl.absTol   = ctrlC.absTol;
+    ctrl.relTol   = ctrlC.relTol;
+    ctrl.progress = ctrlC.progress;
+    return ctrl;
+}
+
+/* Model Fit
+   """"""""" */
+inline ElModelFitCtrl_s CReflect( const ModelFitCtrl<float>& ctrl )
+{
+    ElModelFitCtrl_s ctrlC;
+    ctrlC.rho      = ctrl.rho;
+    ctrlC.maxIter  = ctrl.maxIter;
+    ctrlC.inv      = ctrl.inv;
+    ctrlC.progress = ctrl.progress;
+    return ctrlC;
+}
+
+inline ElModelFitCtrl_d CReflect( const ModelFitCtrl<double>& ctrl )
+{
+    ElModelFitCtrl_d ctrlC;
+    ctrlC.rho      = ctrl.rho;
+    ctrlC.maxIter  = ctrl.maxIter;
+    ctrlC.inv      = ctrl.inv;
+    ctrlC.progress = ctrl.progress;
+    return ctrlC;
+}
+
+inline ModelFitCtrl<float> CReflect( const ElModelFitCtrl_s ctrlC )
+{
+    ModelFitCtrl<float> ctrl;
+    ctrl.rho      = ctrlC.rho;
+    ctrl.maxIter  = ctrlC.maxIter;
+    ctrl.inv      = ctrlC.inv;
+    ctrl.progress = ctrlC.progress;
+    return ctrl;
+}
+
+inline ModelFitCtrl<double> CReflect( const ElModelFitCtrl_d ctrlC )
+{
+    ModelFitCtrl<double> ctrl;
+    ctrl.rho      = ctrlC.rho;
+    ctrl.maxIter  = ctrlC.maxIter;
+    ctrl.inv      = ctrlC.inv;
+    ctrl.progress = ctrlC.progress;
+    return ctrl;
+}
+
+/* Support Vector Machine
+   """""""""""""""""""""" */
+inline ElSVMCtrl_s CReflect( const SVMCtrl<float>& ctrl )
+{
+    ElSVMCtrl_s ctrlC;
+    ctrlC.useIPM       = ctrl.useIPM;
+    ctrlC.modelFitCtrl = CReflect(ctrl.modelFitCtrl);
+    ctrlC.ipmCtrl      = CReflect(ctrl.ipmCtrl);
+    return ctrlC;
+}
+
+inline ElSVMCtrl_d CReflect( const SVMCtrl<double>& ctrl )
+{
+    ElSVMCtrl_d ctrlC;
+    ctrlC.useIPM       = ctrl.useIPM;
+    ctrlC.modelFitCtrl = CReflect(ctrl.modelFitCtrl);
+    ctrlC.ipmCtrl      = CReflect(ctrl.ipmCtrl);
+    return ctrlC;
+}
+
+inline SVMCtrl<float> CReflect( const ElSVMCtrl_s ctrlC )
+{
+    SVMCtrl<float> ctrl;
+    ctrl.useIPM       = ctrlC.useIPM;
+    ctrl.modelFitCtrl = CReflect(ctrlC.modelFitCtrl);
+    ctrl.ipmCtrl      = CReflect(ctrlC.ipmCtrl);
+    return ctrl;
+}
+
+inline SVMCtrl<double> CReflect( const ElSVMCtrl_d ctrlC )
+{
+    SVMCtrl<double> ctrl;
+    ctrl.useIPM       = ctrlC.useIPM;
+    ctrl.modelFitCtrl = CReflect(ctrlC.modelFitCtrl);
+    ctrl.ipmCtrl      = CReflect(ctrlC.ipmCtrl);
+    return ctrl;
+}
 
 } // namespace El
 

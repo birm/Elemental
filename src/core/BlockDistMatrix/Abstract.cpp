@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -18,7 +18,7 @@ namespace El {
 
 template<typename T>
 AbstractBlockDistMatrix<T>::AbstractBlockDistMatrix
-( const El::Grid& g, Int root )
+( const El::Grid& g, int root )
 : viewType_(OWNER),
   height_(0), width_(0),
   auxMemory_(),
@@ -32,7 +32,7 @@ AbstractBlockDistMatrix<T>::AbstractBlockDistMatrix
 
 template<typename T>
 AbstractBlockDistMatrix<T>::AbstractBlockDistMatrix
-( const El::Grid& g, Int blockHeight, Int blockWidth, Int root )
+( const El::Grid& g, Int blockHeight, Int blockWidth, int root )
 : viewType_(OWNER),
   height_(0), width_(0),
   auxMemory_(),
@@ -75,10 +75,9 @@ template<typename T>
 AbstractBlockDistMatrix<T>& 
 AbstractBlockDistMatrix<T>::operator=( AbstractBlockDistMatrix<T>&& A )
 {
-    if( Viewing() && !A.Viewing() )
+    if( Viewing() || A.Viewing() )
     {
-        LogicError
-        ("Cannot move a non-view into a viewing AbstractBlockDistMatrix");
+        Copy( A, *this );
     }
     else
     {
@@ -146,7 +145,7 @@ template<typename T>
 void AbstractBlockDistMatrix<T>::Resize( Int height, Int width )
 {
     DEBUG_ONLY(
-        CallStackEntry cse("ABDM::Resize");
+        CSE cse("ABDM::Resize");
         AssertNotLocked();
     )
     height_ = height; 
@@ -161,7 +160,7 @@ template<typename T>
 void AbstractBlockDistMatrix<T>::Resize( Int height, Int width, Int ldim )
 {
     DEBUG_ONLY(
-        CallStackEntry cse("ABDM::Resize");
+        CSE cse("ABDM::Resize");
         AssertNotLocked();
     )
     height_ = height; 
@@ -176,7 +175,7 @@ void AbstractBlockDistMatrix<T>::Resize( Int height, Int width, Int ldim )
 template<typename T>
 void AbstractBlockDistMatrix<T>::MakeConsistent( bool includingViewers )
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::MakeConsistent"))
+    DEBUG_ONLY(CSE cse("ABDM::MakeConsistent"))
 
     const Int msgLength = 13;
     Int message[msgLength];
@@ -207,7 +206,7 @@ void AbstractBlockDistMatrix<T>::MakeConsistent( bool includingViewers )
     }
     if( includingViewers )
     {
-        const Int vcRoot = g.VCToViewingMap(0);
+        const Int vcRoot = g.VCToViewing(0);
         mpi::Broadcast( message, msgLength, vcRoot, g.ViewingComm() );
     }
     const ViewType newViewType    = static_cast<ViewType>(message[0]);
@@ -222,7 +221,7 @@ void AbstractBlockDistMatrix<T>::MakeConsistent( bool includingViewers )
     const Int newRowAlign         = message[ 9];
     const Int newColCut           = message[10];
     const Int newRowCut           = message[11];
-    const Int root                = message[12];
+    const int root                = message[12];
 
     root_            = root;
     viewType_        = newViewType;
@@ -243,7 +242,7 @@ void AbstractBlockDistMatrix<T>::MakeConsistent( bool includingViewers )
 template<typename T>
 void AbstractBlockDistMatrix<T>::MakeSizeConsistent( bool includingViewers )
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::MakeSizeConsistent"))
+    DEBUG_ONLY(CSE cse("ABDM::MakeSizeConsistent"))
 
     const Int msgLength = 2;
     Int message[msgLength];
@@ -263,7 +262,7 @@ void AbstractBlockDistMatrix<T>::MakeSizeConsistent( bool includingViewers )
     }
     if( includingViewers )
     {
-        const Int vcRoot = g.VCToViewingMap(0);
+        const Int vcRoot = g.VCToViewing(0);
         mpi::Broadcast( message, msgLength, vcRoot, g.ViewingComm() );
     }
     const Int newHeight = message[0]; 
@@ -277,9 +276,9 @@ void AbstractBlockDistMatrix<T>::MakeSizeConsistent( bool includingViewers )
 template<typename T>
 void AbstractBlockDistMatrix<T>::Align
 ( Int blockHeight, Int blockWidth, 
-  Int colAlign, Int rowAlign, Int colCut, Int rowCut, bool constrain )
+  int colAlign, int rowAlign, Int colCut, Int rowCut, bool constrain )
 { 
-    DEBUG_ONLY(CallStackEntry cse("ABDM::Align"))
+    DEBUG_ONLY(CSE cse("ABDM::Align"))
     const bool requireChange = 
         blockHeight_ != blockHeight || blockWidth_ != blockWidth ||
         colAlign_    != colAlign    || rowAlign_   != rowAlign   ||
@@ -306,9 +305,9 @@ void AbstractBlockDistMatrix<T>::Align
 
 template<typename T>
 void AbstractBlockDistMatrix<T>::AlignCols
-( Int blockHeight, Int colAlign, Int colCut, bool constrain )
+( Int blockHeight, int colAlign, Int colCut, bool constrain )
 { 
-    DEBUG_ONLY(CallStackEntry cse("ABDM::AlignCols"))
+    DEBUG_ONLY(CSE cse("ABDM::AlignCols"))
     const bool requireChange = 
         blockHeight_ != blockHeight || 
         colAlign_    != colAlign    || 
@@ -329,9 +328,9 @@ void AbstractBlockDistMatrix<T>::AlignCols
 
 template<typename T>
 void AbstractBlockDistMatrix<T>::AlignRows
-( Int blockWidth, Int rowAlign, Int rowCut, bool constrain )
+( Int blockWidth, int rowAlign, Int rowCut, bool constrain )
 { 
-    DEBUG_ONLY(CallStackEntry cse("ABDM::AlignRows"))
+    DEBUG_ONLY(CSE cse("ABDM::AlignRows"))
     const bool requireChange = 
         blockWidth_ != blockWidth || 
         rowAlign_   != rowAlign   || 
@@ -364,10 +363,10 @@ void AbstractBlockDistMatrix<T>::FreeAlignments()
 }
 
 template<typename T>
-void AbstractBlockDistMatrix<T>::SetRoot( Int root, bool constrain )
+void AbstractBlockDistMatrix<T>::SetRoot( int root, bool constrain )
 {
     DEBUG_ONLY(
-        CallStackEntry cse("ABDM::SetRoot");
+        CSE cse("ABDM::SetRoot");
         if( root < 0 || root >= mpi::Size(CrossComm()) )
             LogicError("Invalid root");
     )
@@ -382,42 +381,18 @@ template<typename T>
 void AbstractBlockDistMatrix<T>::AlignWith
 ( const El::BlockDistData& data, bool constrain )
 { 
-    DEBUG_ONLY(CallStackEntry cse("ABDM::AlignWith"))
+    DEBUG_ONLY(CSE cse("ABDM::AlignWith"))
     AlignColsWith( data, constrain );
     AlignRowsWith( data, constrain );
 }
 
 template<typename T>
-void AbstractBlockDistMatrix<T>::AlignColsWith
-( const El::BlockDistData& data, bool constrain )
-{ 
-    DEBUG_ONLY(
-        CallStackEntry cse("ABDM::AlignColsWith");
-        if( colAlign_ != 0 )
-            LogicError("Alignment should have been zero");
-    )
-    SetGrid( *data.grid );
-}
-
-template<typename T>
-void AbstractBlockDistMatrix<T>::AlignRowsWith
-( const El::BlockDistData& data, bool constrain )
-{ 
-    DEBUG_ONLY(
-        CallStackEntry cse("ABDM::AlignRowsWith");
-        if( rowAlign_ != 0 )
-            LogicError("Alignment should have been zero");
-    )
-    SetGrid( *data.grid );
-}
-
-template<typename T>
 void AbstractBlockDistMatrix<T>::AlignAndResize
 ( Int blockHeight, Int blockWidth, 
-  Int colAlign, Int rowAlign, Int colCut, Int rowCut,
+  int colAlign, int rowAlign, Int colCut, Int rowCut,
   Int height, Int width, bool force, bool constrain )
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::AlignAndResize"))
+    DEBUG_ONLY(CSE cse("ABDM::AlignAndResize"))
     if( !Viewing() )
     {
         if( force || !ColConstrained() )
@@ -450,10 +425,10 @@ void AbstractBlockDistMatrix<T>::AlignAndResize
 
 template<typename T>
 void AbstractBlockDistMatrix<T>::AlignColsAndResize
-( Int blockHeight, Int colAlign, Int colCut, Int height, Int width, 
+( Int blockHeight, int colAlign, Int colCut, Int height, Int width, 
   bool force, bool constrain )
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::AlignColsAndResize"))
+    DEBUG_ONLY(CSE cse("ABDM::AlignColsAndResize"))
     if( !Viewing() && (force || !ColConstrained()) )
     {
         blockHeight_ = blockHeight;
@@ -472,10 +447,10 @@ void AbstractBlockDistMatrix<T>::AlignColsAndResize
 
 template<typename T>
 void AbstractBlockDistMatrix<T>::AlignRowsAndResize
-( Int blockWidth, Int rowAlign, Int rowCut, Int height, Int width, 
+( Int blockWidth, int rowAlign, Int rowCut, Int height, Int width, 
   bool force, bool constrain )
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::AlignRowsAndResize"))
+    DEBUG_ONLY(CSE cse("ABDM::AlignRowsAndResize"))
     if( !Viewing() && (force || !RowConstrained()) )
     {
         blockWidth_ = blockWidth;
@@ -499,10 +474,10 @@ template<typename T>
 void AbstractBlockDistMatrix<T>::Attach
 ( Int height, Int width, const El::Grid& g, 
   Int blockHeight, Int blockWidth, 
-  Int colAlign, Int rowAlign, Int colCut, Int rowCut,
-  T* buffer, Int ldim, Int root )
+  int colAlign, int rowAlign, Int colCut, Int rowCut,
+  T* buffer, Int ldim, int root )
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::Attach"))
+    DEBUG_ONLY(CSE cse("ABDM::Attach"))
     Empty();
 
     grid_ = &g;
@@ -533,8 +508,8 @@ template<typename T>
 void AbstractBlockDistMatrix<T>::Attach
 ( Int height, Int width, const El::Grid& g,
   Int blockHeight, Int blockWidth, 
-  Int colAlign, Int rowAlign, Int colCut, Int rowCut, El::Matrix<T>& A, 
-  Int root )
+  int colAlign, int rowAlign, Int colCut, Int rowCut, El::Matrix<T>& A, 
+  int root )
 {
     // TODO: Assert that the local dimensions are correct
     Attach
@@ -546,10 +521,10 @@ template<typename T>
 void AbstractBlockDistMatrix<T>::LockedAttach
 ( Int height, Int width, const El::Grid& g, 
   Int blockHeight, Int blockWidth, 
-  Int colAlign, Int rowAlign, Int colCut, Int rowCut,
-  const T* buffer, Int ldim, Int root )
+  int colAlign, int rowAlign, Int colCut, Int rowCut,
+  const T* buffer, Int ldim, int root )
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::LockedAttach"))
+    DEBUG_ONLY(CSE cse("ABDM::LockedAttach"))
     Empty();
 
     grid_ = &g;
@@ -580,8 +555,8 @@ template<typename T>
 void AbstractBlockDistMatrix<T>::LockedAttach
 ( Int height, Int width, const El::Grid& g,
   Int blockHeight, Int blockWidth, 
-  Int colAlign, Int rowAlign, Int colCut, Int rowCut, const El::Matrix<T>& A,
-  Int root )
+  int colAlign, int rowAlign, Int colCut, Int rowCut, const El::Matrix<T>& A,
+  int root )
 {
     // TODO: Assert that the local dimensions are correct
     LockedAttach
@@ -664,9 +639,9 @@ template<typename T>
 Int AbstractBlockDistMatrix<T>::BlockWidth() const { return blockWidth_; }
 
 template<typename T>
-Int AbstractBlockDistMatrix<T>::ColAlign() const { return colAlign_; }
+int AbstractBlockDistMatrix<T>::ColAlign() const { return colAlign_; }
 template<typename T>
-Int AbstractBlockDistMatrix<T>::RowAlign() const { return rowAlign_; }
+int AbstractBlockDistMatrix<T>::RowAlign() const { return rowAlign_; }
 
 template<typename T>
 Int AbstractBlockDistMatrix<T>::ColCut() const { return colCut_; }
@@ -674,9 +649,9 @@ template<typename T>
 Int AbstractBlockDistMatrix<T>::RowCut() const { return rowCut_; }
 
 template<typename T>
-Int AbstractBlockDistMatrix<T>::ColShift() const { return colShift_; }
+int AbstractBlockDistMatrix<T>::ColShift() const { return colShift_; }
 template<typename T>
-Int AbstractBlockDistMatrix<T>::RowShift() const { return rowShift_; }
+int AbstractBlockDistMatrix<T>::RowShift() const { return rowShift_; }
 
 template<typename T>
 bool AbstractBlockDistMatrix<T>::ColConstrained() const 
@@ -693,22 +668,30 @@ bool AbstractBlockDistMatrix<T>::Participating() const
 { return grid_->InGrid() && (CrossRank()==root_); }
 
 template<typename T>
-Int AbstractBlockDistMatrix<T>::RowOwner( Int i ) const
-{ return (((i+ColCut())/BlockHeight())+ColAlign()) % ColStride(); }
+int AbstractBlockDistMatrix<T>::RowOwner( Int i ) const
+{ 
+    if( i == END ) i = height_ - 1;
+    return int((((i+ColCut())/BlockHeight())+ColAlign()) % ColStride()); 
+}
+
 template<typename T>
-Int AbstractBlockDistMatrix<T>::ColOwner( Int j ) const
-{ return (((j+RowCut())/BlockWidth())+RowAlign()) % RowStride(); }
+int AbstractBlockDistMatrix<T>::ColOwner( Int j ) const
+{ 
+    if( j == END ) j = width_ - 1;
+    return int((((j+RowCut())/BlockWidth())+RowAlign()) % RowStride()); 
+}
+
 template<typename T>
-Int AbstractBlockDistMatrix<T>::Owner( Int i, Int j ) const
+int AbstractBlockDistMatrix<T>::Owner( Int i, Int j ) const
 { return RowOwner(i)+ColOwner(j)*ColStride(); }
 
 template<typename T>
 Int AbstractBlockDistMatrix<T>::LocalRow( Int i ) const
 { 
     DEBUG_ONLY(
-        CallStackEntry cse("ABDM::LocalRow");
-        if( !IsLocalRow(i) )
-            LogicError("Requested local index of non-local row");
+      CSE cse("ABDM::LocalRow");
+      if( !IsLocalRow(i) )
+          LogicError("Requested local index of non-local row");
     )
     return LocalRowOffset(i);
 }
@@ -717,30 +700,41 @@ template<typename T>
 Int AbstractBlockDistMatrix<T>::LocalCol( Int j ) const
 {
     DEBUG_ONLY(
-        CallStackEntry cse("ABDM::LocalCol");
-        if( !IsLocalCol(j) )
-            LogicError("Requested local index of non-local column");
+      CSE cse("ABDM::LocalCol");
+      if( !IsLocalCol(j) )
+          LogicError("Requested local index of non-local column");
     )
     return LocalColOffset(j);
 }
 
 template<typename T>
 Int AbstractBlockDistMatrix<T>::LocalRowOffset( Int i ) const
-{ return BlockedLength_
-         ( i, ColShift(), BlockHeight(), ColCut(), ColStride() ); }
+{ 
+    if( i == END ) i = height_ - 1;
+    return BlockedLength_
+           ( i, ColShift(), BlockHeight(), ColCut(), ColStride() ); 
+}
+
 template<typename T>
 Int AbstractBlockDistMatrix<T>::LocalColOffset( Int j ) const
-{ return BlockedLength_( j, RowShift(), BlockWidth(), RowCut(), RowStride() ); }
+{ 
+    if( j == END ) j = width_ - 1;
+    return BlockedLength_
+           ( j, RowShift(), BlockWidth(), RowCut(), RowStride() ); 
+}
 
 template<typename T>
 Int AbstractBlockDistMatrix<T>::GlobalRow( Int iLoc ) const
 { 
+    if( iLoc == END ) iLoc = LocalHeight();
     return GlobalBlockedIndex
            (iLoc,ColShift(),BlockHeight(),ColCut(),ColStride()); 
 }
+
 template<typename T>
 Int AbstractBlockDistMatrix<T>::GlobalCol( Int jLoc ) const
 { 
+    if( jLoc == END ) jLoc = LocalWidth();
     return GlobalBlockedIndex
            (jLoc,RowShift(),BlockWidth(),RowCut(),RowStride()); 
 }
@@ -770,50 +764,46 @@ mpi::Comm AbstractBlockDistMatrix<T>::PartialUnionRowComm() const
 { return mpi::COMM_SELF; }
 
 template<typename T>
-Int AbstractBlockDistMatrix<T>::PartialColStride() const
-{ return ColStride(); }
+int AbstractBlockDistMatrix<T>::PartialColStride() const { return ColStride(); }
 template<typename T>
-Int AbstractBlockDistMatrix<T>::PartialRowStride() const
-{ return RowStride(); }
+int AbstractBlockDistMatrix<T>::PartialRowStride() const { return RowStride(); }
 
 template<typename T>
-Int AbstractBlockDistMatrix<T>::PartialUnionColStride() const
-{ return 1; }
+int AbstractBlockDistMatrix<T>::PartialUnionColStride() const { return 1; }
 template<typename T>
-Int AbstractBlockDistMatrix<T>::PartialUnionRowStride() const
-{ return 1; }
+int AbstractBlockDistMatrix<T>::PartialUnionRowStride() const { return 1; }
 
 template<typename T>
-Int AbstractBlockDistMatrix<T>::ColRank() const { return mpi::Rank(ColComm()); }
+int AbstractBlockDistMatrix<T>::ColRank() const { return mpi::Rank(ColComm()); }
 template<typename T>
-Int AbstractBlockDistMatrix<T>::RowRank() const { return mpi::Rank(RowComm()); }
+int AbstractBlockDistMatrix<T>::RowRank() const { return mpi::Rank(RowComm()); }
 
 template<typename T>
-Int AbstractBlockDistMatrix<T>::PartialColRank() const
+int AbstractBlockDistMatrix<T>::PartialColRank() const
 { return mpi::Rank(PartialColComm()); }
 template<typename T>
-Int AbstractBlockDistMatrix<T>::PartialRowRank() const
+int AbstractBlockDistMatrix<T>::PartialRowRank() const
 { return mpi::Rank(PartialRowComm()); }
 
 template<typename T>
-Int AbstractBlockDistMatrix<T>::PartialUnionColRank() const
+int AbstractBlockDistMatrix<T>::PartialUnionColRank() const
 { return mpi::Rank(PartialUnionColComm()); }
 template<typename T>
-Int AbstractBlockDistMatrix<T>::PartialUnionRowRank() const
+int AbstractBlockDistMatrix<T>::PartialUnionRowRank() const
 { return mpi::Rank(PartialUnionRowComm()); }
 
 template<typename T>
-Int AbstractBlockDistMatrix<T>::DistRank() const
+int AbstractBlockDistMatrix<T>::DistRank() const
 { return mpi::Rank(DistComm()); }
 template<typename T>
-Int AbstractBlockDistMatrix<T>::CrossRank() const
+int AbstractBlockDistMatrix<T>::CrossRank() const
 { return mpi::Rank(CrossComm()); }
 template<typename T>
-Int AbstractBlockDistMatrix<T>::RedundantRank() const
+int AbstractBlockDistMatrix<T>::RedundantRank() const
 { return mpi::Rank(RedundantComm()); }
 
 template<typename T>
-Int AbstractBlockDistMatrix<T>::Root() const { return root_; }
+int AbstractBlockDistMatrix<T>::Root() const { return root_; }
 
 // Single-entry manipulation
 // =========================
@@ -826,20 +816,18 @@ T
 AbstractBlockDistMatrix<T>::Get( Int i, Int j ) const
 {
     DEBUG_ONLY(
-        CallStackEntry cse("ABDM::Get");
-        if( !grid_->InGrid() )
-            LogicError("Get should only be called in-grid");
+      CSE cse("ABDM::Get");
+      if( !grid_->InGrid() )
+          LogicError("Get should only be called in-grid");
     )
+    if( i == END ) i = height_ - 1;
+    if( j == END ) j = width_ - 1;
     T value;
     if( CrossRank() == Root() )
     {
-        const Int owner = Owner( i, j );
+        const int owner = Owner( i, j );
         if( owner == DistRank() )
-        {
-            const Int iLoc = LocalRow(i);
-            const Int jLoc = LocalCol(j);
-            value = GetLocal( iLoc, jLoc );
-        }
+            value = GetLocal( LocalRow(i), LocalCol(j) );
         mpi::Broadcast( value, owner, DistComm() );
     }
     mpi::Broadcast( value, Root(), CrossComm() ); 
@@ -851,20 +839,18 @@ Base<T>
 AbstractBlockDistMatrix<T>::GetRealPart( Int i, Int j ) const
 {
     DEBUG_ONLY(
-        CallStackEntry cse("ABDM::GetRealPart");
-        if( !grid_->InGrid() )
-            LogicError("Get should only be called in-grid");
+      CSE cse("ABDM::GetRealPart");
+      if( !grid_->InGrid() )
+          LogicError("Get should only be called in-grid");
     )
+    if( i == END ) i = height_ - 1;
+    if( j == END ) j = width_ - 1;
     Base<T> value;
     if( CrossRank() == Root() )
     {
-        const Int owner = Owner( i, j );
+        const int owner = Owner( i, j );
         if( owner == DistRank() )
-        {
-            const Int iLoc = LocalRow(i);
-            const Int jLoc = LocalCol(j);
-            value = GetLocalRealPart( iLoc, jLoc );
-        }
+            value = GetLocalRealPart( LocalRow(i), LocalCol(j) );
         mpi::Broadcast( value, owner, DistComm() );
     }
     mpi::Broadcast( value, Root(), CrossComm() );
@@ -876,22 +862,18 @@ Base<T>
 AbstractBlockDistMatrix<T>::GetImagPart( Int i, Int j ) const
 {
     DEBUG_ONLY(
-        CallStackEntry cse("ABDM::GetImagPart");
-        if( !grid_->InGrid() )
-            LogicError("Get should only be called in-grid");
+      CSE cse("ABDM::GetImagPart");
+      if( !grid_->InGrid() )
+          LogicError("Get should only be called in-grid");
     )
     Base<T> value;
     if( IsComplex<T>::val )
     {
         if( CrossRank() == Root() )
         {
-            const Int owner = Owner( i, j );
+            const int owner = Owner( i, j );
             if( owner == DistRank() )
-            {
-                const Int iLoc = LocalRow(i);
-                const Int jLoc = LocalCol(j);
-                value = GetLocalRealPart( iLoc, jLoc );
-            }
+                value = GetLocalRealPart( LocalRow(i), LocalCol(j) );
             mpi::Broadcast( value, owner, DistComm() );
         }
         mpi::Broadcast( value, Root(), CrossComm() );
@@ -904,129 +886,89 @@ AbstractBlockDistMatrix<T>::GetImagPart( Int i, Int j ) const
 template<typename T>
 void AbstractBlockDistMatrix<T>::Set( Int i, Int j, T value )
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::Set"))
-    if( CrossRank() == Root() )
-    {
-        const Int owner = Owner( i, j );
-        if( owner == DistRank() )
-        {
-            const Int iLoc = LocalRow(i);
-            const Int jLoc = LocalCol(j);
-            SetLocal( iLoc, jLoc, value );
-        }
-    }
+    DEBUG_ONLY(CSE cse("ABDM::Set"))
+    if( IsLocal(i,j) )
+        SetLocal( LocalRow(i), LocalCol(j), value );
 }
+
+template<typename T>
+void AbstractBlockDistMatrix<T>::Set( const Entry<T>& entry )
+{ Set( entry.i, entry.j, entry.value ); }
 
 template<typename T>
 void AbstractBlockDistMatrix<T>::SetRealPart( Int i, Int j, Base<T> value )
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::SetRealPart"))
-    if( CrossRank() == Root() )
-    {
-        const Int owner = Owner( i, j );
-        if( owner == DistRank() )
-        {
-            const Int iLoc = LocalRow(i);
-            const Int jLoc = LocalCol(j);
-            SetLocalRealPart( iLoc, jLoc, value );
-        }
-    }
+    DEBUG_ONLY(CSE cse("ABDM::SetRealPart"))
+    if( IsLocal(i,j) )
+        SetLocalRealPart( LocalRow(i), LocalCol(j), value );
 }
+
+template<typename T>
+void AbstractBlockDistMatrix<T>::SetRealPart( const Entry<Base<T>>& entry )
+{ SetRealPart( entry.i, entry.j, entry.value ); }
 
 template<typename T>
 void AbstractBlockDistMatrix<T>::SetImagPart( Int i, Int j, Base<T> value )
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::SetImagPart"))
-    if( CrossRank() == Root() )
-    {
-        const Int owner = Owner( i, j );
-        if( owner == DistRank() )
-        {
-            const Int iLoc = LocalRow(i);
-            const Int jLoc = LocalCol(j);
-            SetLocalImagPart( iLoc, jLoc, value );
-        }
-    }
+    DEBUG_ONLY(CSE cse("ABDM::SetImagPart"))
+    if( IsLocal(i,j) )
+        SetLocalImagPart( LocalRow(i), LocalCol(j), value );
 }
+
+template<typename T>
+void AbstractBlockDistMatrix<T>::SetImagPart( const Entry<Base<T>>& entry )
+{ SetImagPart( entry.i, entry.j, entry.value ); }
 
 template<typename T>
 void AbstractBlockDistMatrix<T>::Update( Int i, Int j, T value )
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::Update"))
-    if( CrossRank() == Root() )
-    {
-        const Int owner = Owner( i, j );
-        if( owner == DistRank() )
-        {
-            const Int iLoc = LocalRow(i);
-            const Int jLoc = LocalCol(j);
-            UpdateLocal( iLoc, jLoc, value );
-        }
-    }
+    DEBUG_ONLY(CSE cse("ABDM::Update"))
+    if( IsLocal(i,j) )
+        UpdateLocal( LocalRow(i), LocalCol(j), value );
 }
+
+template<typename T>
+void AbstractBlockDistMatrix<T>::Update( const Entry<T>& entry )
+{ Update( entry.i, entry.j, entry.value ); }
 
 template<typename T>
 void AbstractBlockDistMatrix<T>::UpdateRealPart( Int i, Int j, Base<T> value )
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::UpdateRealPart"))
-    if( CrossRank() == Root() )
-    {
-        const Int owner = Owner( i, j );
-        if( owner == DistRank() )
-        {
-            const Int iLoc = LocalRow(i);
-            const Int jLoc = LocalCol(j);
-            UpdateLocalRealPart( iLoc, jLoc, value );
-        }
-    }
+    DEBUG_ONLY(CSE cse("ABDM::UpdateRealPart"))
+    if( IsLocal(i,j) )
+        UpdateLocalRealPart( LocalRow(i), LocalCol(j), value );
 }
+
+template<typename T>
+void AbstractBlockDistMatrix<T>::UpdateRealPart( const Entry<Base<T>>& entry )
+{ UpdateRealPart( entry.i, entry.j, entry.value ); }
 
 template<typename T>
 void AbstractBlockDistMatrix<T>::UpdateImagPart( Int i, Int j, Base<T> value )
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::UpdateImagPart"))
-    if( CrossRank() == Root() )
-    {
-        const Int owner = Owner( i, j );
-        if( owner == DistRank() )
-        {
-            const Int iLoc = LocalRow(i);
-            const Int jLoc = LocalCol(j);
-            UpdateLocalImagPart( iLoc, jLoc, value );
-        }
-    }
+    DEBUG_ONLY(CSE cse("ABDM::UpdateImagPart"))
+    if( IsLocal(i,j) )
+        UpdateLocalImagPart( LocalRow(i), LocalCol(j), value );
 }
+
+template<typename T>
+void AbstractBlockDistMatrix<T>::UpdateImagPart( const Entry<Base<T>>& entry )
+{ UpdateImagPart( entry.i, entry.j, entry.value ); }
 
 template<typename T>
 void AbstractBlockDistMatrix<T>::MakeReal( Int i, Int j )
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::MakeReal"))
-    if( CrossRank() == Root() )
-    {
-        const Int owner = Owner( i, j );
-        if( owner == DistRank() )
-        {
-            const Int iLoc = LocalRow(i);
-            const Int jLoc = LocalCol(j);
-            MakeLocalReal( iLoc, jLoc );
-        }
-    }
+    DEBUG_ONLY(CSE cse("ABDM::MakeReal"))
+    if( IsLocal(i,j) )
+        MakeLocalReal( LocalRow(i), LocalCol(j) );
 }
 
 template<typename T>
 void AbstractBlockDistMatrix<T>::Conjugate( Int i, Int j )
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::Conjugate"))
-    if( CrossRank() == Root() )
-    {
-        const Int owner = Owner( i, j );
-        if( owner == DistRank() )
-        {
-            const Int iLoc = LocalRow(i);
-            const Int jLoc = LocalCol(j);
-            ConjugateLocal( iLoc, jLoc );
-        }
-    }
+    DEBUG_ONLY(CSE cse("ABDM::Conjugate"))
+    if( IsLocal(i,j) )
+        ConjugateLocal( LocalRow(i), LocalCol(j) );
 }
 
 // Local entry manipulation
@@ -1052,9 +994,18 @@ void AbstractBlockDistMatrix<T>::SetLocal( Int iLoc, Int jLoc, T alpha )
 { matrix_.Set(iLoc,jLoc,alpha); }
 
 template<typename T>
+void AbstractBlockDistMatrix<T>::SetLocal( const Entry<T>& localEntry )
+{ SetLocal( localEntry.i, localEntry.j, localEntry.value ); }
+
+template<typename T>
 void AbstractBlockDistMatrix<T>::SetLocalRealPart
 ( Int iLoc, Int jLoc, Base<T> alpha )
 { matrix_.SetRealPart(iLoc,jLoc,alpha); }
+
+template<typename T>
+void 
+AbstractBlockDistMatrix<T>::SetLocalRealPart( const Entry<Base<T>>& localEntry )
+{ SetLocalRealPart( localEntry.i, localEntry.j, localEntry.value ); }
 
 template<typename T>
 void AbstractBlockDistMatrix<T>::SetLocalImagPart
@@ -1062,8 +1013,17 @@ void AbstractBlockDistMatrix<T>::SetLocalImagPart
 { matrix_.SetImagPart(iLoc,jLoc,alpha); }
 
 template<typename T>
+void 
+AbstractBlockDistMatrix<T>::SetLocalImagPart( const Entry<Base<T>>& localEntry )
+{ SetLocalImagPart( localEntry.i, localEntry.j, localEntry.value ); }
+
+template<typename T>
 void AbstractBlockDistMatrix<T>::UpdateLocal( Int iLoc, Int jLoc, T alpha )
 { matrix_.Update(iLoc,jLoc,alpha); }
+
+template<typename T>
+void AbstractBlockDistMatrix<T>::UpdateLocal( const Entry<T>& localEntry )
+{ UpdateLocal( localEntry.i, localEntry.j, localEntry.value ); }
 
 template<typename T>
 void AbstractBlockDistMatrix<T>::UpdateLocalRealPart
@@ -1071,9 +1031,21 @@ void AbstractBlockDistMatrix<T>::UpdateLocalRealPart
 { matrix_.UpdateRealPart(iLoc,jLoc,alpha); }
 
 template<typename T>
+void 
+AbstractBlockDistMatrix<T>::UpdateLocalRealPart
+( const Entry<Base<T>>& localEntry )
+{ UpdateLocalRealPart( localEntry.i, localEntry.j, localEntry.value ); }
+
+template<typename T>
 void AbstractBlockDistMatrix<T>::UpdateLocalImagPart
 ( Int iLoc, Int jLoc, Base<T> alpha )
 { matrix_.UpdateImagPart(iLoc,jLoc,alpha); }
+
+template<typename T>
+void 
+AbstractBlockDistMatrix<T>::UpdateLocalImagPart
+( const Entry<Base<T>>& localEntry )
+{ UpdateLocalImagPart( localEntry.i, localEntry.j, localEntry.value ); }
 
 template<typename T>
 void AbstractBlockDistMatrix<T>::MakeLocalReal( Int iLoc, Int jLoc )
@@ -1089,7 +1061,7 @@ template<typename T>
 bool AbstractBlockDistMatrix<T>::DiagonalAlignedWith
 ( const El::BlockDistData& d, Int offset ) const
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::DiagonalAlignedWith"))
+    DEBUG_ONLY(CSE cse("ABDM::DiagonalAlignedWith"))
     // TODO: Ensure blocksize is compatible...the blocksizes needed for a 
     //       diagonal distribution are variable except for special cases.
     LogicError("This routine is not yet written");
@@ -1097,654 +1069,73 @@ bool AbstractBlockDistMatrix<T>::DiagonalAlignedWith
 }
 
 template<typename T>
-Int AbstractBlockDistMatrix<T>::DiagonalRoot( Int offset ) const
+int AbstractBlockDistMatrix<T>::DiagonalRoot( Int offset ) const
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::DiagonalRoot"))
+    DEBUG_ONLY(CSE cse("ABDM::DiagonalRoot"))
     LogicError("This routine is not yet written");
     return 0;
 }
 
 template<typename T>
-Int AbstractBlockDistMatrix<T>::DiagonalAlign( Int offset ) const
+int AbstractBlockDistMatrix<T>::DiagonalAlign( Int offset ) const
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::DiagonalAlign"))
+    DEBUG_ONLY(CSE cse("ABDM::DiagonalAlign"))
     LogicError("This routine is not yet written");
     return 0;
 }
 
 template<typename T>
-void AbstractBlockDistMatrix<T>::MakeDiagonalReal( Int offset )
+void AbstractBlockDistMatrix<T>::AlignColsWith
+( const El::BlockDistData& data, bool constrain )
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::MakeDiagonalReal"))
-    const Int height = Height();
-    const Int localWidth = LocalWidth();
-    for( Int jLoc=0; jLoc<localWidth; ++jLoc )
-    {
-        const Int j = GlobalCol(jLoc);
-        if( j < height && IsLocal(j,j) )
-        {
-            const Int iLoc = LocalRow(j);
-            MakeLocalReal( iLoc, jLoc );
-        }
-    }
+    DEBUG_ONLY(CSE cse("ABDM::AlignColsWith"))
+    SetGrid( *data.grid );
+    SetRoot( data.root );
+    if( data.colDist == ColDist() || data.colDist == PartialColDist() )
+        AlignCols( data.blockHeight, data.colAlign, data.colCut, constrain );
+    else if( data.rowDist == ColDist() || data.rowDist == PartialColDist() )
+        AlignCols( data.blockWidth, data.rowAlign, data.rowCut, constrain );
+    else if( data.colDist == PartialUnionColDist() )
+        AlignCols
+        ( data.blockHeight, data.colAlign % ColStride(), data.colCut,
+          constrain );
+    else if( data.rowDist == PartialUnionColDist() )
+        AlignCols
+        ( data.blockWidth, data.rowAlign % ColStride(), data.rowCut,
+          constrain );
+    DEBUG_ONLY(
+        else if( ColDist()    != CollectedColDist() && 
+                 data.colDist != CollectedColDist() && 
+                 data.rowDist != CollectedColDist() )
+            LogicError("Nonsensical alignment");
+    )
 }
 
 template<typename T>
-void AbstractBlockDistMatrix<T>::ConjugateDiagonal( Int offset )
+void AbstractBlockDistMatrix<T>::AlignRowsWith
+( const El::BlockDistData& data, bool constrain )
 {
-    DEBUG_ONLY(CallStackEntry cse("ABDM::ConjugateDiagonal"))
-    const Int height = Height();
-    const Int localWidth = LocalWidth();
-    for( Int jLoc=0; jLoc<localWidth; ++jLoc )
-    {
-        const Int j = GlobalCol(jLoc);
-        if( j < height && IsLocal(j,j) )
-        {
-            const Int iLoc = LocalRow(j);
-            ConjugateLocal( iLoc, jLoc );
-        }
-    }
-}
-
-// Arbitrary submatrix manipulation
-// ================================
-
-// Global submatrix manipulation
-// -----------------------------
-
-template<typename T>
-void AbstractBlockDistMatrix<T>::GetSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd, 
-  DistMatrix<T,STAR,STAR>& ASub ) const
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::GetSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    ASub.SetGrid( Grid() );
-    ASub.Resize( m, n, m );
-    Zeros( ASub, m, n );
-    if( Participating() )
-    {
-        // Fill in our locally-owned entries
-        for( Int jSub=0; jSub<n; ++jSub )
-        {
-            const Int j = colInd[jSub];
-            if( IsLocalCol(j) )
-            {
-                const Int jLoc = LocalCol(j);
-                for( Int iSub=0; iSub<m; ++iSub )
-                {
-                    const Int i = rowInd[iSub];
-                    if( IsLocalRow(i) )
-                    {
-                        const Int iLoc = LocalRow(i);
-                        ASub.SetLocal( iSub, jSub, GetLocal(iLoc,jLoc) );
-                    }
-                }
-            }
-        }
-        // Sum over the distribution communicator
-        mpi::AllReduce( ASub.Buffer(), m*n, DistComm() ); 
-    }
-    // Broadcast over the cross communicator
-    mpi::Broadcast( ASub.Buffer(), m*n, Root(), CrossComm() );
-}
-
-template<typename T>
-void AbstractBlockDistMatrix<T>::GetRealPartOfSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd, 
-  DistMatrix<Base<T>,STAR,STAR>& ASub ) const
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::GetRealPartOfSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    ASub.SetGrid( Grid() );
-    ASub.Resize( m, n, m );
-    Zeros( ASub, m, n );
-    if( Participating() )
-    {
-        // Fill in our locally-owned entries
-        for( Int jSub=0; jSub<n; ++jSub )
-        {
-            const Int j = colInd[jSub];
-            if( IsLocalCol(j) )
-            {
-                const Int jLoc = LocalCol(j);
-                for( Int iSub=0; iSub<m; ++iSub )
-                {
-                    const Int i = rowInd[iSub];
-                    if( IsLocalRow(i) )
-                    {
-                        const Int iLoc = LocalRow(i);
-                        ASub.SetLocal
-                        ( iSub, jSub, GetLocalRealPart(iLoc,jLoc) );
-                    }
-                }
-            }
-        }
-        // Sum over the distribution communicator
-        mpi::AllReduce( ASub.Buffer(), m*n, DistComm() ); 
-    }
-    // Broadcast over the cross communicator
-    mpi::Broadcast( ASub.Buffer(), m*n, Root(), CrossComm() );
-}
-
-template<typename T>
-void AbstractBlockDistMatrix<T>::GetImagPartOfSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd, 
-  DistMatrix<Base<T>,STAR,STAR>& ASub ) const
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::GetImagPartOfSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    ASub.SetGrid( Grid() );
-    ASub.Resize( m, n, m );
-    Zeros( ASub, m, n );
-    if( Participating() )
-    {
-        // Fill in our locally-owned entries
-        for( Int jSub=0; jSub<n; ++jSub )
-        {
-            const Int j = colInd[jSub];
-            if( IsLocalCol(j) )
-            {
-                const Int jLoc = LocalCol(j);
-                for( Int iSub=0; iSub<m; ++iSub )
-                {
-                    const Int i = rowInd[iSub];
-                    if( IsLocalRow(i) )
-                    {
-                        const Int iLoc = LocalRow(i);
-                        ASub.SetLocal
-                        ( iSub, jSub, GetLocalImagPart(iLoc,jLoc) );
-                    }
-                }
-            }
-        }
-        // Sum over the distribution communicator
-        mpi::AllReduce( ASub.Buffer(), m*n, DistComm() ); 
-    }
-    // Broadcast over the cross communicator
-    mpi::Broadcast( ASub.Buffer(), m*n, Root(), CrossComm() );
-}
-
-template<typename T>
-DistMatrix<T,STAR,STAR>
-AbstractBlockDistMatrix<T>::GetSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd ) const
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::GetSubmatrix"))
-    DistMatrix<T,STAR,STAR> ASub( Grid() );
-    GetSubmatrix( rowInd, colInd, ASub );
-    return ASub;
-}
-
-template<typename T>
-DistMatrix<Base<T>,STAR,STAR>
-AbstractBlockDistMatrix<T>::GetRealPartOfSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd ) const
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::GetRealPartOfSubmatrix"))
-    DistMatrix<Base<T>,STAR,STAR> ASub( Grid() );
-    GetRealPartOfSubmatrix( rowInd, colInd, ASub );
-    return ASub;
-}
-
-template<typename T>
-DistMatrix<Base<T>,STAR,STAR>
-AbstractBlockDistMatrix<T>::GetImagPartOfSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd ) const
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::GetImagPartOfSubmatrix"))
-    DistMatrix<Base<T>,STAR,STAR> ASub( Grid() );
-    GetImagPartOfSubmatrix( rowInd, colInd, ASub );
-    return ASub;
-}
-
-template<typename T>
-void 
-AbstractBlockDistMatrix<T>::SetSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-  const DistMatrix<T,STAR,STAR>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::SetSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    if( Participating() )
-    {
-        // Fill in our locally-owned entries
-        for( Int jSub=0; jSub<n; ++jSub )
-        {
-            const Int j = colInd[jSub];
-            if( IsLocalCol(j) )
-            {
-                const Int jLoc = LocalCol(j);
-                for( Int iSub=0; iSub<m; ++iSub )
-                {
-                    const Int i = rowInd[iSub];
-                    if( IsLocalRow(i) )
-                    {
-                        const Int iLoc = LocalRow(i);
-                        SetLocal( iLoc, jLoc, ASub.GetLocal(iSub,jSub) );
-                    }
-                }
-            }
-        }
-    }
-}
-
-template<typename T>
-void 
-AbstractBlockDistMatrix<T>::SetRealPartOfSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-  const DistMatrix<Base<T>,STAR,STAR>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::SetRealPartOfSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    if( Participating() )
-    {
-        // Fill in our locally-owned entries
-        for( Int jSub=0; jSub<n; ++jSub )
-        {
-            const Int j = colInd[jSub];
-            if( IsLocalCol(j) )
-            {
-                const Int jLoc = LocalCol(j);
-                for( Int iSub=0; iSub<m; ++iSub )
-                {
-                    const Int i = rowInd[iSub];
-                    if( IsLocalRow(i) )
-                    {
-                        const Int iLoc = LocalRow(i);
-                        SetLocalRealPart
-                        ( iLoc, jLoc, ASub.GetLocal(iSub,jSub) );
-                    }
-                }
-            }
-        }
-    }
-}
-
-template<typename T>
-void 
-AbstractBlockDistMatrix<T>::SetImagPartOfSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-  const DistMatrix<Base<T>,STAR,STAR>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::SetImagPartOfSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    if( Participating() )
-    {
-        // Fill in our locally-owned entries
-        for( Int jSub=0; jSub<n; ++jSub )
-        {
-            const Int j = colInd[jSub];
-            if( IsLocalCol(j) )
-            {
-                const Int jLoc = LocalCol(j);
-                for( Int iSub=0; iSub<m; ++iSub )
-                {
-                    const Int i = rowInd[iSub];
-                    if( IsLocalRow(i) )
-                    {
-                        const Int iLoc = LocalRow(i);
-                        SetLocalImagPart
-                        ( iLoc, jLoc, ASub.GetLocal(iSub,jSub) );
-                    }
-                }
-            }
-        }
-    }
-}
-
-template<typename T>
-void 
-AbstractBlockDistMatrix<T>::UpdateSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-  T alpha, const DistMatrix<T,STAR,STAR>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::UpdateSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    if( Participating() )
-    {
-        // Modify our locally-owned entries
-        for( Int jSub=0; jSub<n; ++jSub )
-        {
-            const Int j = colInd[jSub];
-            if( IsLocalCol(j) )
-            {
-                const Int jLoc = LocalCol(j);
-                for( Int iSub=0; iSub<m; ++iSub )
-                {
-                    const Int i = rowInd[iSub];
-                    if( IsLocalRow(i) )
-                    {
-                        const Int iLoc = LocalRow(i);
-                        UpdateLocal
-                        ( iLoc, jLoc, alpha*ASub.GetLocal(iSub,jSub) );
-                    }
-                }
-            }
-        }
-    }
-}
-
-template<typename T>
-void 
-AbstractBlockDistMatrix<T>::UpdateRealPartOfSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-  Base<T> alpha, const DistMatrix<Base<T>,STAR,STAR>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::UpdateRealPartOfSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    if( Participating() )
-    {
-        // Modify our locally-owned entries
-        for( Int jSub=0; jSub<n; ++jSub )
-        {
-            const Int j = colInd[jSub];
-            if( IsLocalCol(j) )
-            {
-                const Int jLoc = LocalCol(j);
-                for( Int iSub=0; iSub<m; ++iSub )
-                {
-                    const Int i = rowInd[iSub];
-                    if( IsLocalRow(i) )
-                    {
-                        const Int iLoc = LocalRow(i);
-                        UpdateLocalRealPart
-                        ( iLoc, jLoc, alpha*ASub.GetLocal(iSub,jSub) );
-                    }
-                }
-            }
-        }
-    }
-}
-
-template<typename T>
-void 
-AbstractBlockDistMatrix<T>::UpdateImagPartOfSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-  Base<T> alpha, const DistMatrix<Base<T>,STAR,STAR>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::UpdateImagPartOfSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    if( Participating() )
-    {
-        // Modify our locally-owned entries
-        for( Int jSub=0; jSub<n; ++jSub )
-        {
-            const Int j = colInd[jSub];
-            if( IsLocalCol(j) )
-            {
-                const Int jLoc = LocalCol(j);
-                for( Int iSub=0; iSub<m; ++iSub )
-                {
-                    const Int i = rowInd[iSub];
-                    if( IsLocalRow(i) )
-                    {
-                        const Int iLoc = LocalRow(i);
-                        UpdateLocalImagPart
-                        ( iLoc, jLoc, alpha*ASub.GetLocal(iSub,jSub) );
-                    }
-                }
-            }
-        }
-    }
-}
-
-template<typename T>
-void 
-AbstractBlockDistMatrix<T>::MakeSubmatrixReal
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd )
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::MakeSubmatrixReal"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    if( Participating() )
-    {
-        // Modify the locally-owned entries 
-        for( Int jSub=0; jSub<n; ++jSub )
-        {
-            const Int j = colInd[jSub];
-            if( IsLocalCol(j) )
-            {
-                const Int jLoc = LocalCol(j);
-                for( Int iSub=0; iSub<m; ++iSub )
-                {
-                    const Int i = rowInd[iSub];
-                    if( IsLocalRow(i) )
-                    {
-                        const Int iLoc = LocalRow(i);
-                        MakeLocalReal( iLoc, jLoc );
-                    }
-                }
-            }
-        }
-    }
-}
-
-template<typename T>
-void 
-AbstractBlockDistMatrix<T>::ConjugateSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd )
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::ConjugateSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    if( Participating() )
-    {
-        // Modify the locally-owned entries 
-        for( Int jSub=0; jSub<n; ++jSub )
-        {
-            const Int j = colInd[jSub];
-            if( IsLocalCol(j) )
-            {
-                const Int jLoc = LocalCol(j);
-                for( Int iSub=0; iSub<m; ++iSub )
-                {
-                    const Int i = rowInd[iSub];
-                    if( IsLocalRow(i) )
-                    {
-                        const Int iLoc = LocalRow(i);
-                        ConjugateLocal( iLoc, jLoc );
-                    }
-                }
-            }
-        }
-    }
-}
-
-// Local submatrix manipulation
-// ----------------------------
-
-template<typename T>
-void AbstractBlockDistMatrix<T>::GetLocalSubmatrix
-( const std::vector<Int>& rowIndLoc, const std::vector<Int>& colIndLoc, 
-  El::Matrix<T>& ASub ) const
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::GetLocalSubmatrix"))
-    LockedMatrix().GetSubmatrix( rowIndLoc, colIndLoc, ASub );
-}
-
-template<typename T>
-void AbstractBlockDistMatrix<T>::GetRealPartOfLocalSubmatrix
-( const std::vector<Int>& rowIndLoc, const std::vector<Int>& colIndLoc, 
-  El::Matrix<Base<T>>& ASub ) const
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::GetRealPartOfLocalSubmatrix"))
-    LockedMatrix().GetRealPartOfSubmatrix( rowIndLoc, colIndLoc, ASub );
-}
-
-template<typename T>
-void AbstractBlockDistMatrix<T>::GetImagPartOfLocalSubmatrix
-( const std::vector<Int>& rowIndLoc, const std::vector<Int>& colIndLoc, 
-  El::Matrix<Base<T>>& ASub ) const
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::GetImagPartOfLocalSubmatrix"))
-    LockedMatrix().GetImagPartOfSubmatrix( rowIndLoc, colIndLoc, ASub );
-}
-
-template<typename T>
-void 
-AbstractBlockDistMatrix<T>::SetLocalSubmatrix
-( const std::vector<Int>& rowIndLoc, const std::vector<Int>& colIndLoc,
-  const El::Matrix<T>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::SetLocalSubmatrix"))
-    Matrix().SetSubmatrix( rowIndLoc, colIndLoc, ASub );
-}
-
-template<typename T>
-void 
-AbstractBlockDistMatrix<T>::SetRealPartOfLocalSubmatrix
-( const std::vector<Int>& rowIndLoc, const std::vector<Int>& colIndLoc,
-  const El::Matrix<Base<T>>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::SetRealPartOfLocalSubmatrix"))
-    Matrix().SetRealPartOfSubmatrix( rowIndLoc, colIndLoc, ASub );
-}
-
-template<typename T>
-void 
-AbstractBlockDistMatrix<T>::SetImagPartOfLocalSubmatrix
-( const std::vector<Int>& rowIndLoc, const std::vector<Int>& colIndLoc,
-  const El::Matrix<Base<T>>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::SetImagPartOfLocalSubmatrix"))
-    Matrix().SetImagPartOfSubmatrix( rowIndLoc, colIndLoc, ASub );
-}
-
-template<typename T>
-void 
-AbstractBlockDistMatrix<T>::UpdateLocalSubmatrix
-( const std::vector<Int>& rowIndLoc, const std::vector<Int>& colIndLoc,
-  T alpha, const El::Matrix<T>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::UpdateLocalSubmatrix"))
-    Matrix().UpdateSubmatrix( rowIndLoc, colIndLoc, alpha, ASub );
-}
-
-template<typename T>
-void 
-AbstractBlockDistMatrix<T>::UpdateRealPartOfLocalSubmatrix
-( const std::vector<Int>& rowIndLoc, const std::vector<Int>& colIndLoc,
-  Base<T> alpha, const El::Matrix<Base<T>>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::UpdateRealPartOfLocalSubmatrix"))
-    Matrix().UpdateRealPartOfSubmatrix( rowIndLoc, colIndLoc, alpha, ASub );
-}
-
-template<typename T>
-void 
-AbstractBlockDistMatrix<T>::UpdateImagPartOfLocalSubmatrix
-( const std::vector<Int>& rowIndLoc, const std::vector<Int>& colIndLoc,
-  Base<T> alpha, const El::Matrix<Base<T>>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::UpdateImagPartOfLocalSubmatrix"))
-    Matrix().UpdateImagPartOfSubmatrix( rowIndLoc, colIndLoc, alpha, ASub );
-}
-
-template<typename T>
-void AbstractBlockDistMatrix<T>::MakeLocalSubmatrixReal
-( const std::vector<Int>& rowIndLoc, const std::vector<Int>& colIndLoc )
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::MakeLocalSubmatrixReal"))
-    Matrix().MakeSubmatrixReal( rowIndLoc, colIndLoc );
-}
-
-template<typename T>
-void AbstractBlockDistMatrix<T>::ConjugateLocalSubmatrix
-( const std::vector<Int>& rowIndLoc, const std::vector<Int>& colIndLoc )
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::ConjugateLocalSubmatrix"))
-    Matrix().ConjugateSubmatrix( rowIndLoc, colIndLoc );
-}
-
-// Broadcast the local matrix over a particular communicator
-// =========================================================
-// NOTE: The matrix dimensions *must* be uniform over the communicator.
-template<typename T>
-void AbstractBlockDistMatrix<T>::BroadcastOver( mpi::Comm comm, Int rank )
-{
-    DEBUG_ONLY(CallStackEntry cse("ADM::BroadcastOver"))
-    if( !Participating() )
-        return;
-
-    const Int localHeight = LocalHeight();
-    const Int localWidth = LocalWidth();
-    const Int localSize = localHeight*localWidth;
-    const Int ldim = LDim();
-    if( localHeight == ldim )
-    {
-        mpi::Broadcast( Buffer(), localSize, rank, comm );
-    }
-    else
-    {
-        T* buf = auxMemory_.Require( localSize );
-
-        // Pack
-        EL_PARALLEL_FOR
-        for( Int jLoc=0; jLoc<localWidth; ++jLoc )
-            MemCopy
-            ( &buf[jLoc*localHeight], LockedBuffer(0,jLoc), localHeight );
-
-        mpi::Broadcast( buf, localSize, rank, comm );
-
-        // Unpack
-        EL_PARALLEL_FOR
-        for( Int jLoc=0; jLoc<localWidth; ++jLoc )
-            MemCopy
-            ( Buffer(0,jLoc), &buf[jLoc*localHeight], localHeight );
-
-        auxMemory_.Release();
-    }
-}   
-
-// Sum the local matrix over a particular communicator
-// ===================================================
-// NOTE: The matrix dimensions *must* be uniform over the communicator.
-
-template<typename T>
-void AbstractBlockDistMatrix<T>::SumOver( mpi::Comm comm )
-{
-    DEBUG_ONLY(CallStackEntry cse("ABDM::SumOver"))
-    if( !Participating() )
-        return;
-
-    const Int localHeight = LocalHeight();
-    const Int localWidth = LocalWidth();
-    const Int localSize = localHeight*localWidth;
-    const Int ldim = LDim();
-    if( localHeight == ldim )
-    {
-        mpi::AllReduce( Buffer(), localSize, comm );
-    }
-    else
-    {
-        T* buf = auxMemory_.Require( localSize );
-
-        // Pack
-        EL_PARALLEL_FOR
-        for( Int jLoc=0; jLoc<localWidth; ++jLoc )
-            MemCopy
-            ( &buf[jLoc*localHeight], LockedBuffer(0,jLoc), localHeight );
-
-        mpi::AllReduce( buf, localSize, comm );
-
-        // Unpack
-        EL_PARALLEL_FOR
-        for( Int jLoc=0; jLoc<localWidth; ++jLoc )
-            MemCopy
-            ( Buffer(0,jLoc), &buf[jLoc*localHeight], localHeight );
-
-        auxMemory_.Release();
-    }
+    DEBUG_ONLY(CSE cse("ABDM::AlignRowsWith"))
+    SetGrid( *data.grid );
+    SetRoot( data.root );
+    if( data.colDist == RowDist() || data.colDist == PartialRowDist() )
+        AlignRows( data.blockHeight, data.colAlign, data.colCut, constrain );
+    else if( data.rowDist == RowDist() || data.rowDist == PartialRowDist() )
+        AlignRows( data.blockWidth, data.rowAlign, data.rowCut, constrain );
+    else if( data.colDist == PartialUnionRowDist() )
+        AlignRows
+        ( data.blockHeight, data.colAlign % RowStride(), data.colCut,
+          constrain );
+    else if( data.rowDist == PartialUnionRowDist() )
+        AlignRows
+        ( data.blockWidth, data.rowAlign % RowStride(), data.rowCut,
+          constrain );
+    DEBUG_ONLY(
+        else if( RowDist()    != CollectedRowDist() && 
+                 data.colDist != CollectedRowDist() && 
+                 data.rowDist != CollectedRowDist() )
+            LogicError("Nonsensical alignment");
+    )
 }
 
 // Assertions
@@ -1774,6 +1165,8 @@ void AbstractBlockDistMatrix<T>::AssertNotStoringData() const
 template<typename T>
 void AbstractBlockDistMatrix<T>::AssertValidEntry( Int i, Int j ) const
 {
+    if( i == END ) i = height_ - 1;
+    if( j == END ) j = width_ - 1;
     if( i < 0 || i >= Height() || j < 0 || j >= Width() )
         LogicError
         ("Entry (",i,",",j,") is out of bounds of ",Height(),
@@ -1784,6 +1177,8 @@ template<typename T>
 void AbstractBlockDistMatrix<T>::AssertValidSubmatrix
 ( Int i, Int j, Int height, Int width ) const
 {
+    if( i == END ) i = height_ - 1;
+    if( j == END ) j = width_ - 1;
     if( i < 0 || j < 0 )
         LogicError("Indices of submatrix were negative");
     if( height < 0 || width < 0 )
@@ -1792,13 +1187,6 @@ void AbstractBlockDistMatrix<T>::AssertValidSubmatrix
         LogicError
         ("Submatrix is out of bounds: accessing up to (",i+height-1,
          ",",j+width-1,") of ",Height()," x ",Width()," matrix");
-}
-
-template<typename T> 
-void AbstractBlockDistMatrix<T>::AssertSameGrid( const El::Grid& grid ) const
-{
-    if( Grid() != grid )
-        LogicError("Assertion that grids match failed");
 }
 
 template<typename T> 
@@ -1939,6 +1327,7 @@ void AssertConforming2x2
  #define PROTO(T) template class AbstractBlockDistMatrix<T>;
 #endif
 
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

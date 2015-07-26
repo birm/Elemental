@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -22,7 +22,7 @@ void Lyapunov
   SignCtrl<Base<F>> ctrl )
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Lyapunov");
+        CSE cse("Lyapunov");
         if( A.Height() != A.Width() )
             LogicError("A must be square");
         if( C.Height() != A.Height() || C.Width() != A.Height() )
@@ -36,8 +36,8 @@ void Lyapunov
     ( W, WTL, WTR,
          WBL, WBR, m );
     WTL = A;
-    Adjoint( A, WBR ); Scale( F(-1), WBR );
-    WTR = C; Scale( F(-1), WTR );
+    Adjoint( A, WBR ); WBR *= -1;
+    WTR = C;           WTR *= -1;
     Sylvester( m, W, X, ctrl );
 }
 
@@ -47,7 +47,7 @@ void Lyapunov
         AbstractDistMatrix<F>& X, SignCtrl<Base<F>> ctrl )
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Sylvester");
+        CSE cse("Sylvester");
         if( A.Height() != A.Width() )
             LogicError("A must be square");
         if( C.Height() != A.Height() || C.Width() != A.Height() )
@@ -63,8 +63,8 @@ void Lyapunov
     ( W, WTL, WTR,
          WBL, WBR, m );
     WTL = A;
-    Adjoint( A, WBR ); Scale( F(-1), WBR );
-    WTR = C; Scale( F(-1), WTR );
+    Adjoint( A, WBR ); WBR *= -1;
+    WTR = C;           WTR *= -1;
     Sylvester( m, W, X, ctrl );
 }
 

@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -19,34 +19,34 @@ namespace El {
 template<typename F> 
 void Triangle( Matrix<F>& A, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Triangle"))
+    DEBUG_ONLY(CSE cse("Triangle"))
     if( n < 3 )
         LogicError("Must be at least 3x3 to have a second-order symbol");
     Zeros( A, n, n );
-    SetDiagonal( A, 1,          1 );
-    SetDiagonal( A, F(1)/F(4), -2 );
+    FillDiagonal( A, F(1),       1 );
+    FillDiagonal( A, F(1)/F(4), -2 );
 }
 
 template<typename F>
 void Triangle( AbstractDistMatrix<F>& A, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Triangle"))
+    DEBUG_ONLY(CSE cse("Triangle"))
     if( n < 3 )
         LogicError("Must be at least 3x3 to have a second-order symbol");
     Zeros( A, n, n );
-    SetDiagonal( A, 1,          1 );
-    SetDiagonal( A, F(1)/F(4), -2 );
+    FillDiagonal( A, F(1),       1 );
+    FillDiagonal( A, F(1)/F(4), -2 );
 }
 
 template<typename F>
 void Triangle( AbstractBlockDistMatrix<F>& A, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Triangle"))
+    DEBUG_ONLY(CSE cse("Triangle"))
     if( n < 3 )
         LogicError("Must be at least 3x3 to have a second-order symbol");
     Zeros( A, n, n );
-    SetDiagonal( A, 1,          1 );
-    SetDiagonal( A, F(1)/F(4), -2 );
+    FillDiagonal( A, F(1),       1 );
+    FillDiagonal( A, F(1)/F(4), -2 );
 }
 
 #define PROTO(F) \
@@ -55,6 +55,7 @@ void Triangle( AbstractBlockDistMatrix<F>& A, Int n )
   template void Triangle( AbstractBlockDistMatrix<F>& A, Int n );
 
 #define EL_NO_INT_PROTO
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

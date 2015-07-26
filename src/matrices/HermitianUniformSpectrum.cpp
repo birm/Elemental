@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -17,12 +17,12 @@ template<typename F>
 void HermitianUniformSpectrum
 ( Matrix<F>& A, Int n, Base<F> lower, Base<F> upper )
 {
-    DEBUG_ONLY(CallStackEntry cse("HermitianUniformSpectrum"))
+    DEBUG_ONLY(CSE cse("HermitianUniformSpectrum"))
     A.Resize( n, n );
     typedef Base<F> Real;
 
     // Form d and D
-    std::vector<F> d( n );
+    vector<F> d( n );
     for( Int j=0; j<n; ++j )
         d[j] = SampleUniform<Real>( lower, upper );
     Diagonal( A, d );
@@ -34,14 +34,14 @@ void HermitianUniformSpectrum
     qr::ApplyQ( LEFT, NORMAL, Q, t, s, A );
     qr::ApplyQ( RIGHT, ADJOINT, Q, t, s, A );
 
-    A.MakeDiagonalReal();
+    MakeDiagonalReal(A);
 }
 
 template<typename F>
 void HermitianUniformSpectrum
 ( AbstractDistMatrix<F>& APre, Int n, Base<F> lower, Base<F> upper )
 {
-    DEBUG_ONLY(CallStackEntry cse("HermitianUniformSpectrum"))
+    DEBUG_ONLY(CSE cse("HermitianUniformSpectrum"))
     APre.Resize( n, n );
     const Grid& grid = APre.Grid();
     typedef Base<F> Real;
@@ -51,7 +51,7 @@ void HermitianUniformSpectrum
     auto& A = *APtr;
 
     // Form d and D
-    std::vector<F> d( n );
+    vector<F> d( n );
     if( grid.Rank() == 0 )
         for( Int j=0; j<n; ++j )
             d[j] = SampleUniform<Real>( lower, upper );
@@ -69,7 +69,7 @@ void HermitianUniformSpectrum
     qr::ApplyQ( RIGHT, ADJOINT, Q, t, s, A );
 
     // Force the diagonal to be real-valued
-    A.MakeDiagonalReal();
+    MakeDiagonalReal(A);
 }
 
 #define PROTO(F) \

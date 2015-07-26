@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -29,8 +29,8 @@ Matrix<T>::Matrix( Int height, Int width, bool fixed )
   height_(height), width_(width), ldim_(Max(height,1))
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Matrix::Matrix");
-        AssertValidDimensions( height, width );
+      CSE cse("Matrix::Matrix");
+      AssertValidDimensions( height, width );
     )
     memory_.Require( ldim_ * width );
     data_ = memory_.Buffer();
@@ -44,8 +44,8 @@ Matrix<T>::Matrix
   height_(height), width_(width), ldim_(ldim)
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Matrix::Matrix");
-        AssertValidDimensions( height, width, ldim );
+      CSE cse("Matrix::Matrix");
+      AssertValidDimensions( height, width, ldim );
     )
     memory_.Require( ldim*width );
     data_ = memory_.Buffer();
@@ -59,8 +59,8 @@ Matrix<T>::Matrix
   data_(buffer)
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Matrix::Matrix");
-        AssertValidDimensions( height, width, ldim );
+      CSE cse("Matrix::Matrix");
+      AssertValidDimensions( height, width, ldim );
     )
 }
 
@@ -72,8 +72,8 @@ Matrix<T>::Matrix
   data_(buffer)
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Matrix::Matrix");
-        AssertValidDimensions( height, width, ldim );
+      CSE cse("Matrix::Matrix");
+      AssertValidDimensions( height, width, ldim );
     )
 }
 
@@ -83,7 +83,7 @@ Matrix<T>::Matrix( const Matrix<T>& A )
   height_(0), width_(0), ldim_(1), 
   data_(nullptr)
 {
-    DEBUG_ONLY(CallStackEntry cse("Matrix::Matrix( const Matrix& )"))
+    DEBUG_ONLY(CSE cse("Matrix::Matrix( const Matrix& )"))
     if( &A != this )
         *this = A;
     else
@@ -103,59 +103,118 @@ Matrix<T>::~Matrix() { }
 // Assignment and reconfiguration
 // ==============================
 
-// Return a view
-// -------------
 template<typename T>
-Matrix<T> Matrix<T>::operator()( Range<Int> indVert, Range<Int> indHorz )
+void Matrix<T>::Empty()
 {
-    DEBUG_ONLY(CallStackEntry cse("Matrix ind, ind )"))
-    if( this->Locked() )
-        return LockedView( *this, indVert, indHorz );
-    else
-        return View( *this, indVert, indHorz );
+    DEBUG_ONLY(
+      CSE cse("Matrix::Empty()");
+      if( FixedSize() )
+          LogicError("Cannot empty a fixed-size matrix" );
+    )
+    Empty_();
 }
 
 template<typename T>
-const Matrix<T> Matrix<T>::operator()
-( Range<Int> indVert, Range<Int> indHorz ) const
+void Matrix<T>::Resize( Int height, Int width )
 {
-    DEBUG_ONLY(CallStackEntry cse("Matrix( ind, ind )"))
-    return LockedView( *this, indVert, indHorz );
+    DEBUG_ONLY(
+      CSE cse("Matrix::Resize(height,width)");
+      AssertValidDimensions( height, width );
+      if( FixedSize() && ( height != height_ || width != width_ ) )
+          LogicError("Cannot change the size of this matrix");
+      if( Viewing() && ( height > height_ || width > width_ ) )
+          LogicError("Cannot increase the size of this matrix");
+    )
+    Resize_( height, width );
+}
+
+template<typename T>
+void Matrix<T>::Resize( Int height, Int width, Int ldim )
+{
+    DEBUG_ONLY(
+      CSE cse("Matrix::Resize(height,width,ldim)");
+      AssertValidDimensions( height, width, ldim );
+      if( FixedSize() && 
+          ( height != height_ || width != width_ || ldim != ldim_ ) )
+          LogicError("Cannot change the size of this matrix");
+      if( Viewing() && (height > height_ || width > width_ || ldim != ldim_) )
+          LogicError("Cannot increase the size of this matrix");
+    )
+    Resize_( height, width, ldim );
+}
+
+template<typename T>
+void Matrix<T>::Attach( Int height, Int width, T* buffer, Int ldim )
+{
+    DEBUG_ONLY(
+      CSE cse("Matrix::Attach");
+      if( FixedSize() )
+          LogicError("Cannot attach a new buffer to a view with fixed size");
+    )
+    Attach_( height, width, buffer, ldim );
+}
+
+template<typename T>
+void Matrix<T>::LockedAttach( Int height, Int width, const T* buffer, Int ldim )
+{
+    DEBUG_ONLY(
+      CSE cse("Matrix::LockedAttach");
+      if( FixedSize() )
+          LogicError("Cannot attach a new buffer to a view with fixed size");
+    )
+    LockedAttach_( height, width, buffer, ldim );
+}
+
+template<typename T>
+void Matrix<T>::Control( Int height, Int width, T* buffer, Int ldim )
+{
+    DEBUG_ONLY(
+      CSE cse("Matrix::Control");
+      if( FixedSize() )
+          LogicError("Cannot attach a new buffer to a view with fixed size");
+    )
+    Control_( height, width, buffer, ldim );
+}
+
+// Operator overloading
+// ====================
+
+// Return a view
+// -------------
+template<typename T>
+Matrix<T> Matrix<T>::operator()( Range<Int> I, Range<Int> J )
+{
+    DEBUG_ONLY(CSE cse("Matrix::operator()"))
+    if( this->Locked() )
+        return LockedView( *this, I, J );
+    else
+        return View( *this, I, J );
+}
+
+template<typename T>
+const Matrix<T> Matrix<T>::operator()( Range<Int> I, Range<Int> J ) const
+{
+    DEBUG_ONLY(CSE cse("Matrix::operator()"))
+    return LockedView( *this, I, J );
 }
 
 // Make a copy
 // -----------
-
 template<typename T>
-Matrix<T>& Matrix<T>::operator=( const Matrix<T>& A )
+const Matrix<T>& Matrix<T>::operator=( const Matrix<T>& A )
 {
-    DEBUG_ONLY(
-        CallStackEntry cse("Matrix::operator=");
-        if( Locked() )
-            LogicError("Cannot assign to a locked view");
-        if( viewType_ != OWNER && 
-            (A.Height() != Height() || A.Width() != Width()) )
-            LogicError("Cannot assign to a view of different dimensions");
-    )
-    if( viewType_ == OWNER )
-        Resize( A.Height(), A.Width() );
-    const Int height = Height();
-    const Int width = Width();
-    const Int ldim = LDim();
-    const Int ldimOfA = A.LDim();
-    const T* src = A.LockedBuffer();
-    T* dst = Buffer();
-    EL_PARALLEL_FOR
-    for( Int j=0; j<width; ++j )
-        MemCopy( &dst[j*ldim], &src[j*ldimOfA], height );
+    DEBUG_ONLY(CSE cse("Matrix::operator="))
+    Copy( A, *this );
     return *this;
 }
 
+// Move assignment
+// ---------------
 template<typename T>
 Matrix<T>& Matrix<T>::operator=( Matrix<T>&& A )
 {
-    DEBUG_ONLY(CallStackEntry cse("Matrix::operator=( Matrix&& )"))
-    if( Viewing() && !A.Viewing() )
+    DEBUG_ONLY(CSE cse("Matrix::operator=( Matrix&& )"))
+    if( Viewing() || A.Viewing() )
     {
         operator=( (const Matrix<T>&)A );
     }
@@ -171,77 +230,32 @@ Matrix<T>& Matrix<T>::operator=( Matrix<T>&& A )
     return *this;
 }
 
+// Rescaling
+// ---------
 template<typename T>
-void Matrix<T>::Empty()
+const Matrix<T>& Matrix<T>::operator*=( T alpha )
 {
-    DEBUG_ONLY(
-        CallStackEntry cse("Matrix::Empty()");
-        if( FixedSize() )
-            LogicError("Cannot empty a fixed-size matrix" );
-    )
-    Empty_();
+    DEBUG_ONLY(CSE cse("Matrix::operator*=( T )"))
+    Scale( alpha, *this );
+    return *this;
+}
+
+// Addition/subtraction
+// --------------------
+template<typename T>
+const Matrix<T>& Matrix<T>::operator+=( const Matrix<T>& A )
+{
+    DEBUG_ONLY(CSE cse("Matrix::operator+=( const Matrix<T>& )"))
+    Axpy( T(1), A, *this );
+    return *this;
 }
 
 template<typename T>
-void Matrix<T>::Resize( Int height, Int width )
+const Matrix<T>& Matrix<T>::operator-=( const Matrix<T>& A )
 {
-    DEBUG_ONLY(
-        CallStackEntry cse("Matrix::Resize(height,width)");
-        AssertValidDimensions( height, width );
-        if( FixedSize() && ( height != height_ || width != width_ ) )
-            LogicError("Cannot change the size of this matrix");
-        if( Viewing() && ( height > height_ || width > width_ ) )
-            LogicError("Cannot increase the size of this matrix");
-    )
-    Resize_( height, width );
-}
-
-template<typename T>
-void Matrix<T>::Resize( Int height, Int width, Int ldim )
-{
-    DEBUG_ONLY(
-        CallStackEntry cse("Matrix::Resize(height,width,ldim)");
-        AssertValidDimensions( height, width, ldim );
-        if( FixedSize() && 
-            ( height != height_ || width != width_ || ldim != ldim_ ) )
-            LogicError("Cannot change the size of this matrix");
-        if( Viewing() && (height > height_ || width > width_ || ldim != ldim_) )
-            LogicError("Cannot increase the size of this matrix");
-    )
-    Resize_( height, width, ldim );
-}
-
-template<typename T>
-void Matrix<T>::Attach( Int height, Int width, T* buffer, Int ldim )
-{
-    DEBUG_ONLY(
-        CallStackEntry cse("Matrix::Attach");
-        if( FixedSize() )
-            LogicError("Cannot attach a new buffer to a view with fixed size");
-    )
-    Attach_( height, width, buffer, ldim );
-}
-
-template<typename T>
-void Matrix<T>::LockedAttach( Int height, Int width, const T* buffer, Int ldim )
-{
-    DEBUG_ONLY(
-        CallStackEntry cse("Matrix::LockedAttach");
-        if( FixedSize() )
-            LogicError("Cannot attach a new buffer to a view with fixed size");
-    )
-    LockedAttach_( height, width, buffer, ldim );
-}
-
-template<typename T>
-void Matrix<T>::Control( Int height, Int width, T* buffer, Int ldim )
-{
-    DEBUG_ONLY(
-        CallStackEntry cse("Matrix::Control");
-        if( FixedSize() )
-            LogicError("Cannot attach a new buffer to a view with fixed size");
-    )
-    Control_( height, width, buffer, ldim );
+    DEBUG_ONLY(CSE cse("Matrix::operator+=( const Matrix<T>& )"))
+    Axpy( T(-1), A, *this );
+    return *this;
 }
 
 // Basic queries
@@ -267,7 +281,7 @@ template<typename T>
 T* Matrix<T>::Buffer()
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Matrix::Buffer");
+        CSE cse("Matrix::Buffer");
         if( Locked() )
             LogicError("Cannot return non-const buffer of locked Matrix");
     )
@@ -280,10 +294,12 @@ template<typename T>
 T* Matrix<T>::Buffer( Int i, Int j )
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Matrix::Buffer");
-        if( Locked() )
-            LogicError("Cannot return non-const buffer of locked Matrix");
+      CSE cse("Matrix::Buffer");
+      if( Locked() )
+          LogicError("Cannot return non-const buffer of locked Matrix");
     )
+    if( i == END ) i = height_ - 1;
+    if( j == END ) j = width_ - 1;
     // NOTE: This const_cast has been carefully considered and should be safe
     //       since the underlying data should be non-const if this is called.
     return &const_cast<T*>(data_)[i+j*ldim_];
@@ -295,7 +311,9 @@ const T* Matrix<T>::LockedBuffer() const { return data_; }
 template<typename T>
 const T* Matrix<T>::LockedBuffer( Int i, Int j ) const
 {
-    DEBUG_ONLY(CallStackEntry cse("Matrix::LockedBuffer"))
+    DEBUG_ONLY(CSE cse("Matrix::LockedBuffer"))
+    if( i == END ) i = height_ - 1;
+    if( j == END ) j = width_ - 1;
     return &data_[i+j*ldim_];
 }
 
@@ -315,8 +333,8 @@ template<typename T>
 T Matrix<T>::Get( Int i, Int j ) const
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Matrix::Get");
-        AssertValidEntry( i, j );
+      CSE cse("Matrix::Get");
+      AssertValidEntry( i, j );
     )
     return Get_( i, j );
 }
@@ -325,8 +343,8 @@ template<typename T>
 Base<T> Matrix<T>::GetRealPart( Int i, Int j ) const
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Matrix::GetRealPart");
-        AssertValidEntry( i, j );
+      CSE cse("Matrix::GetRealPart");
+      AssertValidEntry( i, j );
     )
     return El::RealPart( Get_( i, j ) );
 }
@@ -335,8 +353,8 @@ template<typename T>
 Base<T> Matrix<T>::GetImagPart( Int i, Int j ) const
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Matrix::GetImagPart");
-        AssertValidEntry( i, j );
+      CSE cse("Matrix::GetImagPart");
+      AssertValidEntry( i, j );
     )
     return El::ImagPart( Get_( i, j ) );
 }
@@ -345,84 +363,108 @@ template<typename T>
 void Matrix<T>::Set( Int i, Int j, T alpha ) 
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Matrix::Set");
-        AssertValidEntry( i, j );
-        if( Locked() )
-            LogicError("Cannot modify data of locked matrices");
+      CSE cse("Matrix::Set");
+      AssertValidEntry( i, j );
+      if( Locked() )
+          LogicError("Cannot modify data of locked matrices");
     )
     Set_( i, j ) = alpha;
 }
 
 template<typename T>
+void Matrix<T>::Set( const Entry<T>& entry )
+{ Set( entry.i, entry.j, entry.value ); }
+
+template<typename T>
 void Matrix<T>::SetRealPart( Int i, Int j, Base<T> alpha )
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Matrix::SetRealPart");
-        AssertValidEntry( i, j );
-        if( Locked() )
-            LogicError("Cannot modify data of locked matrices");
+      CSE cse("Matrix::SetRealPart");
+      AssertValidEntry( i, j );
+      if( Locked() )
+          LogicError("Cannot modify data of locked matrices");
     )
     El::SetRealPart( Set_( i, j ), alpha );
 }
 
 template<typename T>
+void Matrix<T>::SetRealPart( const Entry<Base<T>>& entry )
+{ SetRealPart( entry.i, entry.j, entry.value ); }
+
+template<typename T>
 void Matrix<T>::SetImagPart( Int i, Int j, Base<T> alpha )
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Matrix::SetImagPart");
-        AssertValidEntry( i, j );
-        if( Locked() )
-            LogicError("Cannot modify data of locked matrices");
+      CSE cse("Matrix::SetImagPart");
+      AssertValidEntry( i, j );
+      if( Locked() )
+          LogicError("Cannot modify data of locked matrices");
     )
     ComplainIfReal();
     El::SetImagPart( Set_( i, j ), alpha );
 }
 
 template<typename T>
+void Matrix<T>::SetImagPart( const Entry<Base<T>>& entry )
+{ SetImagPart( entry.i, entry.j, entry.value ); }
+
+template<typename T>
 void Matrix<T>::Update( Int i, Int j, T alpha ) 
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Matrix::Update");
-        AssertValidEntry( i, j );
-        if( Locked() )
-            LogicError("Cannot modify data of locked matrices");
+      CSE cse("Matrix::Update");
+      AssertValidEntry( i, j );
+      if( Locked() )
+          LogicError("Cannot modify data of locked matrices");
     )
     Set_( i, j ) += alpha;
 }
 
 template<typename T>
+void Matrix<T>::Update( const Entry<T>& entry )
+{ Update( entry.i, entry.j, entry.value ); }
+
+template<typename T>
 void Matrix<T>::UpdateRealPart( Int i, Int j, Base<T> alpha )
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Matrix::UpdateRealPart");
-        AssertValidEntry( i, j );
-        if( Locked() )
-            LogicError("Cannot modify data of locked matrices");
+      CSE cse("Matrix::UpdateRealPart");
+      AssertValidEntry( i, j );
+      if( Locked() )
+          LogicError("Cannot modify data of locked matrices");
     )
     El::UpdateRealPart( Set_( i, j ), alpha );
 }
 
 template<typename T>
+void Matrix<T>::UpdateRealPart( const Entry<Base<T>>& entry )
+{ UpdateRealPart( entry.i, entry.j, entry.value ); }
+
+template<typename T>
 void Matrix<T>::UpdateImagPart( Int i, Int j, Base<T> alpha )
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Matrix::UpdateImagPart");
-        AssertValidEntry( i, j );
-        if( Locked() )
-            LogicError("Cannot modify data of locked matrices");
+      CSE cse("Matrix::UpdateImagPart");
+      AssertValidEntry( i, j );
+      if( Locked() )
+          LogicError("Cannot modify data of locked matrices");
     )
     ComplainIfReal();
     El::UpdateImagPart( Set_( i, j ), alpha );
 }
 
 template<typename T>
+void Matrix<T>::UpdateImagPart( const Entry<Base<T>>& entry )
+{ UpdateImagPart( entry.i, entry.j, entry.value ); }
+
+template<typename T>
 void Matrix<T>::MakeReal( Int i, Int j )
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Matrix::MakeReal");
-        AssertValidEntry( i, j );
-        if( Locked() )
-            LogicError("Cannot modify data of locked matrices");
+      CSE cse("Matrix::MakeReal");
+      AssertValidEntry( i, j );
+      if( Locked() )
+          LogicError("Cannot modify data of locked matrices");
     )
     Set( i, j, GetRealPart(i,j) );
 }
@@ -431,483 +473,12 @@ template<typename T>
 void Matrix<T>::Conjugate( Int i, Int j )
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Matrix::Conjugate");
-        AssertValidEntry( i, j );
-        if( Locked() )
-            LogicError("Cannot modify data of locked matrices");
+      CSE cse("Matrix::Conjugate");
+      AssertValidEntry( i, j );
+      if( Locked() )
+          LogicError("Cannot modify data of locked matrices");
     )
     Set( i, j, El::Conj(Get(i,j)) );
-}
-
-// Diagonal manipulation
-// =====================
-
-template<typename T>
-void Matrix<T>::GetDiagonal( Matrix<T>& d, Int offset ) const
-{ 
-    DEBUG_ONLY(
-        CallStackEntry cse("Matrix::GetDiagonal");
-        if( d.Locked() )
-            LogicError("d must not be a locked view");
-    )
-    const Int diagLength = DiagonalLength(offset);
-    d.Resize( diagLength, 1 );
-    const Int iOff = ( offset>=0 ? 0      : -offset );
-    const Int jOff = ( offset>=0 ? offset : 0       );
-    for( Int k=0; k<diagLength; ++k )
-        d.Set_( k, 0 ) = Get_(k+iOff,k+jOff);
-}
-
-template<typename T>
-void Matrix<T>::GetRealPartOfDiagonal( Matrix<Base<T>>& d, Int offset ) const
-{ 
-    DEBUG_ONLY(
-        CallStackEntry cse("Matrix::GetRealPartOfDiagonal");
-        if( d.Locked() )
-            LogicError("d must not be a locked view");
-    )
-    const Int diagLength = DiagonalLength(offset);
-    d.Resize( diagLength, 1 );
-    const Int iOff = ( offset>=0 ? 0      : -offset );
-    const Int jOff = ( offset>=0 ? offset : 0       );
-    for( Int k=0; k<diagLength; ++k )
-        d.Set_( k, 0 ) = El::RealPart( Get_(k+iOff,k+jOff) );
-}
-
-template<typename T>
-void Matrix<T>::GetImagPartOfDiagonal( Matrix<Base<T>>& d, Int offset ) const
-{ 
-    DEBUG_ONLY(
-        CallStackEntry cse("Matrix::GetImagPartOfDiagonal");
-        if( d.Locked() )
-            LogicError("d must not be a locked view");
-    )
-    const Int diagLength = DiagonalLength(offset);
-    d.Resize( diagLength, 1 );
-    const Int iOff = ( offset>=0 ? 0      : -offset );
-    const Int jOff = ( offset>=0 ? offset : 0       );
-    for( Int k=0; k<diagLength; ++k )
-        d.Set_( k, 0 ) = El::ImagPart( Get_(k+iOff,k+jOff) );
-}
-
-template<typename T>
-Matrix<T> Matrix<T>::GetDiagonal( Int offset ) const
-{ 
-    Matrix<T> d;
-    GetDiagonal( d, offset );
-    return d;
-}
-
-template<typename T>
-Matrix<Base<T>> Matrix<T>::GetRealPartOfDiagonal( Int offset ) const
-{ 
-    Matrix<Base<T>> d;
-    GetRealPartOfDiagonal( d, offset );
-    return d;
-}
-
-template<typename T>
-Matrix<Base<T>> Matrix<T>::GetImagPartOfDiagonal( Int offset ) const
-{ 
-    Matrix<Base<T>> d;
-    GetImagPartOfDiagonal( d, offset );
-    return d;
-}
-
-template<typename T>
-void Matrix<T>::SetDiagonal( const Matrix<T>& d, Int offset )
-{ 
-    DEBUG_ONLY(
-        CallStackEntry cse("Matrix::SetDiagonal");
-        if( d.Height() != DiagonalLength(offset) || d.Width() != 1 )
-            LogicError("d is not a column-vector of the right length");
-    )
-    const Int diagLength = DiagonalLength(offset);
-    const Int iOff = ( offset>=0 ? 0      : -offset );
-    const Int jOff = ( offset>=0 ? offset : 0       );
-    for( Int k=0; k<diagLength; ++k )
-        Set_( k+iOff, k+jOff ) = d.Get_(k,0);
-}
-
-template<typename T>
-void Matrix<T>::SetRealPartOfDiagonal( const Matrix<Base<T>>& d, Int offset )
-{ 
-    DEBUG_ONLY(
-        CallStackEntry cse("Matrix::SetRealPartOfDiagonal");
-        if( d.Height() != DiagonalLength(offset) || d.Width() != 1 )
-            LogicError("d is not a column-vector of the right length");
-    )
-    const Int diagLength = DiagonalLength(offset);
-    const Int iOff = ( offset>=0 ? 0      : -offset );
-    const Int jOff = ( offset>=0 ? offset : 0       );
-    for( Int k=0; k<diagLength; ++k )
-        El::SetRealPart( Set_(k+iOff,k+jOff), d.Get_(k,0) );
-}
-
-template<typename T>
-void Matrix<T>::SetImagPartOfDiagonal( const Matrix<Base<T>>& d, Int offset )
-{ 
-    DEBUG_ONLY(
-        CallStackEntry cse("Matrix::SetImagPartOfDiagonal");
-        if( d.Height() != DiagonalLength(offset) || d.Width() != 1 )
-            LogicError("d is not a column-vector of the right length");
-    )
-    ComplainIfReal();
-    const Int diagLength = DiagonalLength(offset);
-    const Int iOff = ( offset>=0 ? 0      : -offset );
-    const Int jOff = ( offset>=0 ? offset : 0       );
-    for( Int k=0; k<diagLength; ++k )
-        El::SetImagPart( Set_(k+iOff,k+jOff), d.Get_(k,0) );
-}
-
-template<typename T>
-void Matrix<T>::UpdateDiagonal( const Matrix<T>& d, Int offset )
-{ 
-    DEBUG_ONLY(
-        CallStackEntry cse("Matrix::UpdateDiagonal");
-        if( d.Height() != DiagonalLength(offset) || d.Width() != 1 )
-            LogicError("d is not a column-vector of the right length");
-    )
-    const Int diagLength = DiagonalLength(offset);
-    const Int iOff = ( offset>=0 ? 0      : -offset );
-    const Int jOff = ( offset>=0 ? offset : 0       );
-    for( Int k=0; k<diagLength; ++k )
-        Set_( k+iOff, k+jOff ) += d.Get(k,0);
-}
-
-template<typename T>
-void Matrix<T>::UpdateRealPartOfDiagonal( const Matrix<Base<T>>& d, Int offset )
-{ 
-    DEBUG_ONLY(
-        CallStackEntry cse("Matrix::UpdateRealPartOfDiagonal");
-        if( d.Height() != DiagonalLength(offset) || d.Width() != 1 )
-            LogicError("d is not a column-vector of the right length");
-    )
-    const Int diagLength = DiagonalLength(offset);
-    const Int iOff = ( offset>=0 ? 0      : -offset );
-    const Int jOff = ( offset>=0 ? offset : 0       );
-    for( Int k=0; k<diagLength; ++k )
-        El::UpdateRealPart( Set_(k+iOff,k+jOff), d.Get_(k,0) );
-}
-
-template<typename T>
-void Matrix<T>::UpdateImagPartOfDiagonal( const Matrix<Base<T>>& d, Int offset )
-{ 
-    DEBUG_ONLY(
-        CallStackEntry cse("Matrix::UpdateImagPartOfDiagonal");
-        if( d.Height() != DiagonalLength(offset) || d.Width() != 1 )
-            LogicError("d is not a column-vector of the right length");
-    )
-    ComplainIfReal();
-    const Int diagLength = DiagonalLength(offset);
-    const Int iOff = ( offset>=0 ? 0      : -offset );
-    const Int jOff = ( offset>=0 ? offset : 0       );
-    for( Int k=0; k<diagLength; ++k )
-        El::UpdateImagPart( Set_(k+iOff,k+jOff), d.Get_(k,0) );
-}
-
-template<typename T>
-void Matrix<T>::MakeDiagonalReal( Int offset )
-{
-    DEBUG_ONLY(CallStackEntry cse("Matrix::MakeDiagonalReal"))
-    const Int diagLength = DiagonalLength(offset);
-    const Int iOff = ( offset>=0 ? 0      : -offset );
-    const Int jOff = ( offset>=0 ? offset : 0       );
-    for( Int k=0; k<diagLength; ++k )
-        Set( k+iOff, k+jOff, RealPart(Get(k+iOff,k+jOff)) );
-}
-
-template<typename T>
-void Matrix<T>::ConjugateDiagonal( Int offset )
-{
-    DEBUG_ONLY(CallStackEntry cse("Matrix::ConjugateDiagonal"))
-    const Int diagLength = DiagonalLength(offset);
-    const Int iOff = ( offset>=0 ? 0      : -offset );
-    const Int jOff = ( offset>=0 ? offset : 0       );
-    for( Int k=0; k<diagLength; ++k )
-        Set( k+iOff, k+jOff, Conj(Get(k+iOff,k+jOff)) );
-}
-
-// Arbitrary submatrix manipulation
-// ================================
-
-template<typename T>
-void Matrix<T>::GetSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-  Matrix<T>& ASub ) const
-{
-    DEBUG_ONLY(CallStackEntry cse("Matrix::GetSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    ASub.Resize( m, n );
-    T* bufSub = ASub.Buffer();
-    const Int ldSub = ASub.LDim();
-    const T* buf = LockedBuffer();
-    const Int ld = LDim();
-    for( Int j=0; j<n; ++j )
-    {
-        const Int jSub = colInd[j];
-        for( Int i=0; i<m; ++i )
-        {
-            DEBUG_ONLY(AssertValidEntry(rowInd[i],colInd[j]))
-            bufSub[i+j*ldSub] = buf[rowInd[i]+jSub*ld];
-        }
-    }
-}
-
-template<typename T>
-void Matrix<T>::GetRealPartOfSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-  Matrix<Base<T>>& ASub ) const
-{
-    DEBUG_ONLY(CallStackEntry cse("Matrix::GetRealPartOfSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    ASub.Resize( m, n );
-    Base<T>* bufSub = ASub.Buffer();
-    const Int ldSub = ASub.LDim();
-    const T* buf = LockedBuffer();
-    const Int ld = LDim();
-    for( Int j=0; j<n; ++j )
-    {
-        const Int jSub = colInd[j];
-        for( Int i=0; i<m; ++i )
-        {
-            DEBUG_ONLY(AssertValidEntry(rowInd[i],colInd[j]))
-            bufSub[i+j*ldSub] = RealPart(buf[rowInd[i]+jSub*ld]);
-        }
-    }
-}
-
-template<typename T>
-void Matrix<T>::GetImagPartOfSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-  Matrix<Base<T>>& ASub ) const
-{
-    DEBUG_ONLY(CallStackEntry cse("Matrix::GetImagPartOfSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    ASub.Resize( m, n );
-    Base<T>* bufSub = ASub.Buffer();
-    const Int ldSub = ASub.LDim();
-    const T* buf = LockedBuffer();
-    const Int ld = LDim();
-    for( Int j=0; j<n; ++j )
-    {
-        const Int jSub = colInd[j];
-        for( Int i=0; i<m; ++i )
-        {
-            DEBUG_ONLY(AssertValidEntry(rowInd[i],colInd[j]))
-            bufSub[i+j*ldSub] = ImagPart(buf[rowInd[i]+jSub*ld]);
-        }
-    }
-}
-
-template<typename T>
-Matrix<T> Matrix<T>::GetSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd ) const
-{
-    Matrix<T> ASub;
-    GetSubmatrix( rowInd, colInd, ASub );
-    return ASub;
-}
-
-template<typename T>
-Matrix<Base<T>> Matrix<T>::GetRealPartOfSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd ) const
-{
-    Matrix<Base<T>> ASub;
-    GetRealPartOfSubmatrix( rowInd, colInd, ASub );
-    return ASub;
-}
-
-template<typename T>
-Matrix<Base<T>> Matrix<T>::GetImagPartOfSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd ) const
-{
-    Matrix<Base<T>> ASub;
-    GetImagPartOfSubmatrix( rowInd, colInd, ASub );
-    return ASub;
-}
-
-template<typename T>
-void Matrix<T>::SetSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-  const Matrix<T>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("Matrix::SetSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    const T* bufSub = ASub.LockedBuffer();
-    const Int ldSub = ASub.LDim();
-    T* buf = Buffer();
-    const Int ld = LDim();
-    for( Int j=0; j<n; ++j )
-    {
-        const Int jSub = colInd[j];
-        for( Int i=0; i<m; ++i )
-        {
-            DEBUG_ONLY(AssertValidEntry(rowInd[i],colInd[j]))
-            buf[rowInd[i]+jSub*ld] = bufSub[i+j*ldSub];
-        }
-    }
-}
-
-template<typename T>
-void Matrix<T>::SetRealPartOfSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-  const Matrix<Base<T>>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("Matrix::SetRealPartOfSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    const Base<T>* bufSub = ASub.LockedBuffer();
-    const Int ldSub = ASub.LDim();
-    T* buf = Buffer();
-    const Int ld = LDim();
-    for( Int j=0; j<n; ++j )
-    {
-        const Int jSub = colInd[j];
-        for( Int i=0; i<m; ++i )
-        {
-            DEBUG_ONLY(AssertValidEntry(rowInd[i],colInd[j]))
-            El::SetRealPart( buf[rowInd[i]+jSub*ld], bufSub[i+j*ldSub] );
-        }
-    }
-}
-
-template<typename T>
-void Matrix<T>::SetImagPartOfSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-  const Matrix<Base<T>>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("Matrix::SetImagPartOfSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    const Base<T>* bufSub = ASub.LockedBuffer();
-    const Int ldSub = ASub.LDim();
-    T* buf = Buffer();
-    const Int ld = LDim();
-    for( Int j=0; j<n; ++j )
-    {
-        const Int jSub = colInd[j];
-        for( Int i=0; i<m; ++i )
-        {
-            DEBUG_ONLY(AssertValidEntry(rowInd[i],colInd[j]))
-            El::SetImagPart( buf[rowInd[i]+jSub*ld], bufSub[i+j*ldSub] );
-        }
-    }
-}
-
-template<typename T>
-void Matrix<T>::UpdateSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-  T alpha, const Matrix<T>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("Matrix::UpdateSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    const T* bufSub = ASub.LockedBuffer();
-    const Int ldSub = ASub.LDim();
-    T* buf = Buffer();
-    const Int ld = LDim();
-    for( Int j=0; j<n; ++j )
-    {
-        const Int jSub = colInd[j];
-        for( Int i=0; i<m; ++i )
-        {
-            DEBUG_ONLY(AssertValidEntry(rowInd[i],colInd[j]))
-            buf[rowInd[i]+jSub*ld] += alpha*bufSub[i+j*ldSub];
-        }
-    }
-}
-
-template<typename T>
-void Matrix<T>::UpdateRealPartOfSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-  Base<T> alpha, const Matrix<Base<T>>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("Matrix::UpdateRealPartOfSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    const Base<T>* bufSub = ASub.LockedBuffer();
-    const Int ldSub = ASub.LDim();
-    T* buf = Buffer();
-    const Int ld = LDim();
-    for( Int j=0; j<n; ++j )
-    {
-        const Int jSub = colInd[j];
-        for( Int i=0; i<m; ++i )
-        {
-            DEBUG_ONLY(AssertValidEntry(rowInd[i],colInd[j]))
-            El::UpdateRealPart
-            ( buf[rowInd[i]+jSub*ld], alpha*bufSub[i+j*ldSub] );
-        }
-    }
-}
-
-template<typename T>
-void Matrix<T>::UpdateImagPartOfSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-  Base<T> alpha, const Matrix<Base<T>>& ASub )
-{
-    DEBUG_ONLY(CallStackEntry cse("Matrix::UpdateImagPartOfSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    const Base<T>* bufSub = ASub.LockedBuffer();
-    const Int ldSub = ASub.LDim();
-    T* buf = Buffer();
-    const Int ld = LDim();
-    for( Int j=0; j<n; ++j )
-    {
-        const Int jSub = colInd[j];
-        for( Int i=0; i<m; ++i )
-        {
-            DEBUG_ONLY(AssertValidEntry(rowInd[i],colInd[j]))
-            El:: UpdateImagPart
-            ( buf[rowInd[i]+jSub*ld], alpha*bufSub[i+j*ldSub] );
-        }
-    }
-}
-
-template<typename T>
-void Matrix<T>::MakeSubmatrixReal
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd )
-{
-    DEBUG_ONLY(CallStackEntry cse("Matrix::MakeSubmatrixReal"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    T* buf = Buffer();
-    const Int ld = LDim();
-    for( Int j=0; j<n; ++j )
-    {
-        const Int jSub = colInd[j];
-        for( Int i=0; i<m; ++i )
-        {
-            DEBUG_ONLY(AssertValidEntry(rowInd[i],colInd[j]))
-            buf[rowInd[i]+jSub*ld] = RealPart(buf[rowInd[i]+jSub*ld]);
-        }
-    }
-}
-
-template<typename T>
-void Matrix<T>::ConjugateSubmatrix
-( const std::vector<Int>& rowInd, const std::vector<Int>& colInd )
-{
-    DEBUG_ONLY(CallStackEntry cse("Matrix::ConjugateSubmatrix"))
-    const Int m = rowInd.size();
-    const Int n = colInd.size();
-    T* buf = Buffer();
-    const Int ld = LDim();
-    for( Int j=0; j<n; ++j )
-    {
-        const Int jSub = colInd[j];
-        for( Int i=0; i<m; ++i )
-        {
-            DEBUG_ONLY(AssertValidEntry(rowInd[i],colInd[j]))
-            buf[rowInd[i]+jSub*ld] = Conj( buf[rowInd[i]+jSub*ld] );
-        }
-    }
 }
 
 // Private routines
@@ -977,11 +548,18 @@ void Matrix<T>::Control_( Int height, Int width, T* buffer, Int ldim )
 // Return a reference to a single entry without error-checking
 // ===========================================================
 template<typename T>
-const T& Matrix<T>::Get_( Int i, Int j ) const { return data_[i+j*ldim_]; }
+const T& Matrix<T>::Get_( Int i, Int j ) const 
+{ 
+    if( i == END ) i = height_ - 1;
+    if( j == END ) j = width_ - 1;
+    return data_[i+j*ldim_]; 
+}
 
 template<typename T>
 T& Matrix<T>::Set_( Int i, Int j ) 
 {
+    if( i == END ) i = height_ - 1;
+    if( j == END ) j = width_ - 1;
     // NOTE: This const_cast has been carefully considered and should be safe
     //       since the underlying data should be non-const if this is called.
     return (const_cast<T*>(data_))[i+j*ldim_];
@@ -1000,7 +578,7 @@ void Matrix<T>::ComplainIfReal() const
 template<typename T>
 void Matrix<T>::AssertValidDimensions( Int height, Int width ) const
 {
-    DEBUG_ONLY(CallStackEntry cse("Matrix::AssertValidDimensions"))
+    DEBUG_ONLY(CSE cse("Matrix::AssertValidDimensions"))
     if( height < 0 || width < 0 )
         LogicError("Height and width must be non-negative");
 }
@@ -1008,7 +586,7 @@ void Matrix<T>::AssertValidDimensions( Int height, Int width ) const
 template<typename T>
 void Matrix<T>::AssertValidDimensions( Int height, Int width, Int ldim ) const
 {
-    DEBUG_ONLY(CallStackEntry cse("Matrix::AssertValidDimensions"))
+    DEBUG_ONLY(CSE cse("Matrix::AssertValidDimensions"))
     AssertValidDimensions( height, width );
     if( ldim < height )
         LogicError("Leading dimension must be no less than height");
@@ -1019,7 +597,9 @@ void Matrix<T>::AssertValidDimensions( Int height, Int width, Int ldim ) const
 template<typename T>
 void Matrix<T>::AssertValidEntry( Int i, Int j ) const
 {
-    DEBUG_ONLY(CallStackEntry cse("Matrix::AssertValidEntry"))
+    DEBUG_ONLY(CSE cse("Matrix::AssertValidEntry"))
+    if( i == END ) i = height_ - 1;
+    if( j == END ) j = width_ - 1;
     if( i < 0 || j < 0 )
         LogicError("Indices must be non-negative");
     if( i >= Height() || j >= Width() )
@@ -1058,6 +638,7 @@ void Matrix<T>::Resize_( Int height, Int width, Int ldim )
 }
 
 #define PROTO(T) template class Matrix<T>;
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

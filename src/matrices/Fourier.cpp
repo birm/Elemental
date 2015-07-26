@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -13,43 +13,43 @@ namespace El {
 template<typename Real>
 void Fourier( Matrix<Complex<Real>>& A, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Fourier"))
+    DEBUG_ONLY(CSE cse("Fourier"))
     A.Resize( n, n );
     const Real pi = 4*Atan( Real(1) );
     const Real nSqrt = Sqrt( Real(n) );
     auto fourierFill = 
-      [=]( Int i, Int j )
+      [=]( Int i, Int j ) -> Complex<Real>
       { const Real theta = -2*pi*i*j/n;
         return Complex<Real>(Cos(theta),Sin(theta))/nSqrt; };
-    IndexDependentFill( A, std::function<Complex<Real>(Int,Int)>(fourierFill) );
+    IndexDependentFill( A, function<Complex<Real>(Int,Int)>(fourierFill) );
 }
 
 template<typename Real>
 void Fourier( AbstractDistMatrix<Complex<Real>>& A, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Fourier"))
+    DEBUG_ONLY(CSE cse("Fourier"))
     A.Resize( n, n );
     const Real pi = 4*Atan( Real(1) );
     const Real nSqrt = Sqrt( Real(n) );
     auto fourierFill = 
-      [=]( Int i, Int j )
+      [=]( Int i, Int j ) -> Complex<Real>
       { const Real theta = -2*pi*i*j/n;
         return Complex<Real>(Cos(theta),Sin(theta))/nSqrt; };
-    IndexDependentFill( A, std::function<Complex<Real>(Int,Int)>(fourierFill) );
+    IndexDependentFill( A, function<Complex<Real>(Int,Int)>(fourierFill) );
 }
 
 template<typename Real>
 void Fourier( AbstractBlockDistMatrix<Complex<Real>>& A, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Fourier"))
+    DEBUG_ONLY(CSE cse("Fourier"))
     A.Resize( n, n );
     const Real pi = 4*Atan( Real(1) );
     const Real nSqrt = Sqrt( Real(n) );
     auto fourierFill = 
-      [=]( Int i, Int j )
+      [=]( Int i, Int j ) -> Complex<Real>
       { const Real theta = -2*pi*i*j/n;
         return Complex<Real>(Cos(theta),Sin(theta))/nSqrt; };
-    IndexDependentFill( A, std::function<Complex<Real>(Int,Int)>(fourierFill) );
+    IndexDependentFill( A, function<Complex<Real>(Int,Int)>(fourierFill) );
 }
 
 #define PROTO(Real) \
@@ -59,6 +59,7 @@ void Fourier( AbstractBlockDistMatrix<Complex<Real>>& A, Int n )
 
 #define EL_NO_INT_PROTO
 #define EL_NO_COMPLEX_PROTO
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

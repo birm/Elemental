@@ -10,13 +10,16 @@ Functionality priorities
 
 Fundamental functionality additions
 -----------------------------------
+[o] Second-order and semidefinite cone support
+[o] Non-naive Lanczos
+[o] 2D sparse matrix distributions
+[o] Matrix type tags for, for example, merging {Gemm,Hemm,Trmm,etc.} into "*"
 [o] Estimate for spectral radius
 [o] Low-rank modifications of QR
-[o] Banded Cholesky factorization
-[o] QR with full pivoting (Businger-Golub plus row-sorting or row-pivoting)
-[o] Finishing prototype generalized Spectral Divide and Conquer
+[-] Successive Band Reduction
 [-] Windowed QR with column pivoting
 [-] Power-method-like p-norm estimation
+[-] More work on (generalized) Spectral Divide and Conquer Schur decompositions
 [-] QL factorization and ql::SolveAfter
 [-] Strong RRQR and RRLQ 
 [-] CUR decompositions (already have (pseudo-)skeleton)
@@ -25,17 +28,14 @@ Fundamental functionality additions
 [-] (Blocked) Aasen's
 [-] TSQR for non-powers-of-two
 [-] TSLU (via tournament pivoting)
-[-] Successive Band Reduction
 [-] Native nonsymmetric (generalized) eigensolver via QR (QZ) algorithm
 [-] Generalized Sylvester equations
 
 Incremental functionality improvements
 --------------------------------------
-[o] Generalize vast majority of interfaces to AbstractDistMatrix by making use
-    of the new version of Copy which allows for shallow copies to be requested
+[o] General redistribution routine between any two matrices with any 
+    process grids (with equivalent viewing communicators)
 [o] Add Bunch-Kaufman C now that explicit permutations are used
-[o] Extend operator() submatrix interfaces to support equivalent of ":", e.g.,
-    an enum named "ALL"
 [o] Extend Grid class to support mappings from, e.g., (MDRank,root) -> VCRank
     and use these mappings to build an (owner,root) -> VCRank mapping for 
     [Block]DistMatrix
@@ -44,15 +44,15 @@ Incremental functionality improvements
 [o] Relative interval subset computation for HermitianEig (i.e., in [-1,1])
 [o] Sequential blocked reduction to tridiagonal form
 [o] Quadratic-time Haar generation via random Householder reflectors
+[o] Banded Cholesky factorization
+[o] QR with full pivoting (Businger-Golub plus row-sorting or row-pivoting)
 [-] 'Control' equivalents to 'Attach' for DistMatrix, and ability to forfeit
     buffers in (Dist)Matrix
 [-] Axpy interface implementation using one-sided communication
 [-] Square process grid specializations of LDL and Bunch-Kaufman
 [-] Businger-esque element-growth monitoring in GEPP and Bunch-Kaufman
 [-] More Sign algorithms (switch to Newton-Schulz near convergence)
-[-] Distribute between different grids for any distribution
 [-] Way for DistMatrix with single process to view Matrix, and operator=
-[-] Ostrowski matrices
 [-] Various approaches (e.g., HJS) for parallel tridiagonalization
 [-] Wrappers for more LAPACK eigensolvers
 [-] Sequential versions of Trr2k 
@@ -94,27 +94,13 @@ Consistency/modularity
 [-] Consistent implementation of unblocked routines
 [-] Safe down-casting of integers in BLAS/LAPACK calls
 
-Documentation
--------------
-[o] Finish adding per-directory README's (e.g., cmake/toolchains/)
-
-Licensing
----------
-[o] Add discussion of METIS being under the Apache License Version 2 and 
-    ParMETIS being under a more restrictive, educational-only, license
-
 External Interfaces
 -------------------
-[o] Manually expose a C interface
-[o] Use the C interface to interact with other languages (e.g., Python, R, etc.)
+[o] Expose BlockDistMatrix to C and Python (as well as ScaLAPACK interface)
 
 Build system
 ------------
-[o] Support PMRRR when pthreads are not available (e.g., Windows)
-[o] Support for OpenBLAS [-D MATH_LIBS="-lopenblas;-lpthread;-lm;-lgfortran"]
-[o] Support for BLIS
-[o] Support for automatically downloading and building netlib BLAS and LAPACK
-[o] Speed up build with C++11's extern templates
+[o] Attempt to shorten build via extern templates
 
 MPI and Threading
 -----------------

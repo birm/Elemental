@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -39,19 +39,6 @@ public:
     // Assignment and reconfiguration
     // ==============================
 
-    // Return a view
-    // -------------
-          Matrix<T> operator()( Range<Int> indVert, Range<Int> indHorz );
-    const Matrix<T> operator()( Range<Int> indVert, Range<Int> indHorz ) const;
-
-    // Make a copy
-    // -----------
-    Matrix<T>& operator=( const Matrix<T>& A );
-
-    // Move assignment
-    // ---------------
-    Matrix<T>& operator=( Matrix<T>&& A );
-
     void Empty();
     void Resize( Int height, Int width );
     void Resize( Int height, Int width, Int ldim );
@@ -60,6 +47,31 @@ public:
     void LockedAttach( Int height, Int width, const T* buffer, Int ldim );
     // Reconfigure around the given buffer and assume ownership
     void Control( Int height, Int width, T* buffer, Int ldim );
+
+    // Operator overloading
+    // ====================
+
+    // Return a view
+    // -------------
+          Matrix<T> operator()( Range<Int> I, Range<Int> J );
+    const Matrix<T> operator()( Range<Int> I, Range<Int> J ) const;
+
+    // Make a copy
+    // -----------
+    const Matrix<T>& operator=( const Matrix<T>& A );
+
+    // Move assignment
+    // ---------------
+    Matrix<T>& operator=( Matrix<T>&& A );
+
+    // Rescaling
+    // ---------
+    const Matrix<T>& operator*=( T alpha );
+
+    // Addition/substraction
+    // ---------------------
+    const Matrix<T>& operator+=( const Matrix<T>& A );
+    const Matrix<T>& operator-=( const Matrix<T>& A );
 
     // Basic queries
     // =============
@@ -82,76 +94,19 @@ public:
     Base<T> GetRealPart( Int i, Int j ) const;
     Base<T> GetImagPart( Int i, Int j ) const;
     void Set( Int i, Int j, T alpha );
+    void Set( const Entry<T>& entry );
     void SetRealPart( Int i, Int j, Base<T> alpha );
     void SetImagPart( Int i, Int j, Base<T> alpha );
+    void SetRealPart( const Entry<Base<T>>& entry );
+    void SetImagPart( const Entry<Base<T>>& entry );
     void Update( Int i, Int j, T alpha );
+    void Update( const Entry<T>& entry );
     void UpdateRealPart( Int i, Int j, Base<T> alpha );
     void UpdateImagPart( Int i, Int j, Base<T> alpha );
+    void UpdateRealPart( const Entry<Base<T>>& entry );
+    void UpdateImagPart( const Entry<Base<T>>& entry );
     void MakeReal( Int i, Int j );
     void Conjugate( Int i, Int j );
-
-    // Diagonal manipulation
-    // =====================
-    void GetDiagonal( Matrix<T>& d, Int offset=0 ) const;
-    void GetRealPartOfDiagonal( Matrix<Base<T>>& d, Int offset=0 ) const;
-    void GetImagPartOfDiagonal( Matrix<Base<T>>& d, Int offset=0 ) const;
-    Matrix<T> GetDiagonal( Int offset=0 ) const;
-    Matrix<Base<T>> GetRealPartOfDiagonal( Int offset=0 ) const;
-    Matrix<Base<T>> GetImagPartOfDiagonal( Int offset=0 ) const;
-
-    void SetDiagonal( const Matrix<T>& d, Int offset=0 );
-    void SetRealPartOfDiagonal( const Matrix<Base<T>>& d, Int offset=0 );
-    void SetImagPartOfDiagonal( const Matrix<Base<T>>& d, Int offset=0 );
-
-    void UpdateDiagonal( const Matrix<T>& d, Int offset=0 );
-    void UpdateRealPartOfDiagonal( const Matrix<Base<T>>& d, Int offset=0 );
-    void UpdateImagPartOfDiagonal( const Matrix<Base<T>>& d, Int offset=0 );
-
-    void MakeDiagonalReal( Int offset=0 );
-    void ConjugateDiagonal( Int offset=0 );
-
-    // Arbitrary submatrix manipulation
-    // ================================
-    void GetSubmatrix
-    ( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-      Matrix<T>& ASub ) const;
-    void GetRealPartOfSubmatrix
-    ( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-      Matrix<Base<T>>& ASub ) const;
-    void GetImagPartOfSubmatrix
-    ( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-      Matrix<Base<T>>& ASub ) const;
-    Matrix<T> GetSubmatrix
-    ( const std::vector<Int>& rowInd, const std::vector<Int>& colInd ) const;
-    Matrix<Base<T>> GetRealPartOfSubmatrix
-    ( const std::vector<Int>& rowInd, const std::vector<Int>& colInd ) const;
-    Matrix<Base<T>> GetImagPartOfSubmatrix
-    ( const std::vector<Int>& rowInd, const std::vector<Int>& colInd ) const;
-
-    void SetSubmatrix
-    ( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-      const Matrix<T>& ASub );
-    void SetRealPartOfSubmatrix
-    ( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-      const Matrix<Base<T>>& ASub );
-    void SetImagPartOfSubmatrix
-    ( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-      const Matrix<Base<T>>& ASub );
-
-    void UpdateSubmatrix
-    ( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-      T alpha, const Matrix<T>& ASub );
-    void UpdateRealPartOfSubmatrix
-    ( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-      Base<T> alpha, const Matrix<Base<T>>& ASub );
-    void UpdateImagPartOfSubmatrix
-    ( const std::vector<Int>& rowInd, const std::vector<Int>& colInd,
-      Base<T> alpha, const Matrix<Base<T>>& ASub );
-
-    void MakeSubmatrixReal
-    ( const std::vector<Int>& rowInd, const std::vector<Int>& colInd );
-    void ConjugateSubmatrix
-    ( const std::vector<Int>& rowInd, const std::vector<Int>& colInd );
 
 private:
     // Member variables

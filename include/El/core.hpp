@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -42,8 +42,7 @@
 # define DEBUG_ONLY(cmd) cmd;
 #endif
 
-// If defined, the _OPENMP macro contains the date of the specification
-#ifdef EL_HAVE_OPENMP
+#ifdef EL_HYBRID
 # include <omp.h>
 # define EL_PARALLEL_FOR _Pragma("omp parallel for")
 # ifdef EL_HAVE_OMP_COLLAPSE
@@ -79,56 +78,71 @@
 # define EL_NOEXCEPT
 #endif
 
-#if defined(EL_BLAS_POST)
-# define EL_BLAS(name) name ## _
-#else
-# define EL_BLAS(name) name
-#endif
+#define EL_CONCAT2(name1,name2) name1 ## name2
+#define EL_CONCAT(name1,name2) EL_CONCAT2(name1,name2)
 
-#if defined(EL_LAPACK_POST)
-# define EL_LAPACK(name) name ## _
+#if defined(EL_BUILT_BLIS_LAPACK) || defined(EL_BUILT_OPENBLAS)
+
+# define EL_BLAS(name) FC_GLOBAL(name,name)
+# define EL_LAPACK(name) FC_GLOBAL(name,name)
+
 #else
-# define EL_LAPACK(name) name
+
+# if defined(EL_HAVE_BLAS_SUFFIX)
+#  define EL_BLAS(name) EL_CONCAT(name,EL_BLAS_SUFFIX)
+# else
+#  define EL_BLAS(name) name
+# endif
+
+# if defined(EL_HAVE_LAPACK_SUFFIX)
+#  define EL_LAPACK(name) EL_CONCAT(name,EL_LAPACK_SUFFIX)
+# else
+#  define EL_LAPACK(name) name
+# endif
+
 #endif
 
 #if defined(EL_HAVE_SCALAPACK)
-# if defined(EL_SCALAPACK_POST)
-#  define EL_SCALAPACK(name) name ## _
+# if defined(EL_BUILT_SCALAPACK)
+#  define EL_SCALAPACK(name) FC_GLOBAL(name,name)
 # else
-#  define EL_SCALAPACK(name) name
+#  if defined(EL_HAVE_SCALAPACK_SUFFIX)
+#   define EL_SCALAPACK(name) EL_CONCAT(name,EL_SCALAPACK_SUFFIX)
+#  else
+#   define EL_SCALAPACK(name) name
+#  endif
 # endif
 #endif
 
 // TODO: Think of how to better decouple the following components
 
 // Declare the intertwined core parts of our library
-#include "El/core/Timer.hpp"
 #include "El/core/Memory.hpp"
-#include "El/core/Scalar/decl.hpp"
+#include "El/core/Element/decl.hpp"
 #include "El/core/types.hpp"
 #include "El/core/imports/mpi.hpp"
 #include "El/core/imports/choice.hpp"
 #include "El/core/imports/mpi_choice.hpp"
 #include "El/core/environment/decl.hpp"
+
+#include "El/core/Timer.hpp"
 #include "El/core/indexing/decl.hpp"
 #include "El/core/imports/blas.hpp"
 #include "El/core/imports/lapack.hpp"
 #include "El/core/imports/flame.hpp"
+#include "El/core/imports/mkl.hpp"
 #include "El/core/imports/pmrrr.hpp"
 #include "El/core/imports/scalapack.hpp"
 
 namespace El {
 
-template<typename T> class Matrix;
+template<typename T=double> class Matrix;
 
-template<typename T> class AbstractDistMatrix;
-template<typename T> class AbstractBlockDistMatrix;
+template<typename T=double> class AbstractDistMatrix;
+template<typename T=double> class AbstractBlockDistMatrix;
 
-template<typename T,Dist U=MC,Dist V=MR> class GeneralDistMatrix;
-template<typename T,Dist U=MC,Dist V=MR> class GeneralBlockDistMatrix;
-
-template<typename T,Dist U=MC,Dist V=MR> class DistMatrix;
-template<typename T,Dist U=MC,Dist V=MR> class BlockDistMatrix;
+template<typename T=double,Dist U=MC,Dist V=MR> class DistMatrix;
+template<typename T=double,Dist U=MC,Dist V=MR> class BlockDistMatrix;
 
 } // namespace El
 
@@ -139,16 +153,17 @@ template<typename T,Dist U=MC,Dist V=MR> class BlockDistMatrix;
 #include "El/core/Proxy.hpp"
 
 // Implement the intertwined parts of the library
-#include "El/core/Scalar/impl.hpp"
+#include "El/core/Element/impl.hpp"
 #include "El/core/environment/impl.hpp"
 #include "El/core/indexing/impl.hpp"
 
 // Declare and implement the decoupled parts of the core of the library
 // (perhaps these should be moved into their own directory?)
-#include "El/core/views/View.hpp"
-#include "El/core/views/Partition.hpp"
-#include "El/core/views/Repartition.hpp"
-#include "El/core/views/SlidePartition.hpp"
+#include "El/core/View.hpp"
+#include "El/core/flame_part/Merge.hpp"
+#include "El/core/flame_part/Partition.hpp"
+#include "El/core/flame_part/Repartition.hpp"
+#include "El/core/flame_part/SlidePartition.hpp"
 #include "El/core/random/decl.hpp"
 #include "El/core/random/impl.hpp"
 #include "El/core/AxpyInterface.hpp"
@@ -156,7 +171,6 @@ template<typename T,Dist U=MC,Dist V=MR> class BlockDistMatrix;
 #include "El/core/Graph.hpp"
 // TODO: Sequential map
 //#include "El/core/Map.hpp"
-#include "El/core/MultiVec.hpp"
 #include "El/core/SparseMatrix.hpp"
 
 #include "El/core/DistGraph.hpp"

@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -28,42 +28,42 @@ void BullsHead( AbstractBlockDistMatrix<Complex<Real>>& A, Int n );
 // ======
 template<typename F1,typename F2>
 void Cauchy
-( Matrix<F1>& A, const std::vector<F2>& x, const std::vector<F2>& y );
+( Matrix<F1>& A, const vector<F2>& x, const vector<F2>& y );
 template<typename F1,typename F2>
 void Cauchy
 ( AbstractDistMatrix<F1>& A,
-  const std::vector<F2>& x, const std::vector<F2>& y );
+  const vector<F2>& x, const vector<F2>& y );
 template<typename F1,typename F2>
 void Cauchy
 ( AbstractBlockDistMatrix<F1>& A,
-  const std::vector<F2>& x, const std::vector<F2>& y );
+  const vector<F2>& x, const vector<F2>& y );
 
 // Cauchy-like
 // ===========
 template<typename F1,typename F2>
 void CauchyLike
 ( Matrix<F1>& A, 
-  const std::vector<F2>& r, const std::vector<F2>& s, 
-  const std::vector<F2>& x, const std::vector<F2>& y );
+  const vector<F2>& r, const vector<F2>& s, 
+  const vector<F2>& x, const vector<F2>& y );
 template<typename F1,typename F2>
 void CauchyLike
 ( AbstractDistMatrix<F1>& A,
-  const std::vector<F2>& r, const std::vector<F2>& s, 
-  const std::vector<F2>& x, const std::vector<F2>& y );
+  const vector<F2>& r, const vector<F2>& s, 
+  const vector<F2>& x, const vector<F2>& y );
 template<typename F1,typename F2>
 void CauchyLike
 ( AbstractBlockDistMatrix<F1>& A,
-  const std::vector<F2>& r, const std::vector<F2>& s, 
-  const std::vector<F2>& x, const std::vector<F2>& y );
+  const vector<F2>& r, const vector<F2>& s, 
+  const vector<F2>& x, const vector<F2>& y );
 
 // Circulant
 // =========
 template<typename T>
-void Circulant( Matrix<T>& A, const std::vector<T>& a );
+void Circulant( Matrix<T>& A, const vector<T>& a );
 template<typename T>
-void Circulant( AbstractDistMatrix<T>& A, const std::vector<T>& a );
+void Circulant( AbstractDistMatrix<T>& A, const vector<T>& a );
 template<typename T>
-void Circulant( AbstractBlockDistMatrix<T>& A, const std::vector<T>& a );
+void Circulant( AbstractBlockDistMatrix<T>& A, const vector<T>& a );
 
 // Demmel
 // ======
@@ -77,25 +77,75 @@ void Demmel( AbstractBlockDistMatrix<F>& A, Int n );
 // Diagonal
 // ========
 template<typename S,typename T>
-void Diagonal( Matrix<S>& D, const std::vector<T>& d );
+void Diagonal( Matrix<S>& D, const vector<T>& d );
 template<typename S,typename T>
-void Diagonal( AbstractDistMatrix<S>& D, const std::vector<T>& d );
+void Diagonal( Matrix<S>& D, const Matrix<T>& d );
 template<typename S,typename T>
-void Diagonal( AbstractBlockDistMatrix<S>& D, const std::vector<T>& d );
+void Diagonal( AbstractDistMatrix<S>& D, const vector<T>& d );
+template<typename S,typename T>
+void Diagonal( AbstractDistMatrix<S>& D, const Matrix<T>& d );
+template<typename S,typename T>
+void Diagonal( AbstractDistMatrix<S>& D, const AbstractDistMatrix<T>& d );
+template<typename S,typename T>
+void Diagonal( AbstractBlockDistMatrix<S>& D, const vector<T>& d );
+template<typename S,typename T>
+void Diagonal( AbstractBlockDistMatrix<S>& D, const Matrix<T>& d );
+
+template<typename S,typename T>
+void Diagonal( SparseMatrix<S>& D, const Matrix<T>& d );
+template<typename S,typename T>
+void Diagonal( DistSparseMatrix<S>& D, const DistMultiVec<T>& d );
+
+// Druinsky-Toledo matrices
+// ========================
+// An example of Bunch-Kaufman A producing large element growth in 
+// floating-point arithmetic. Please see Theorem 5 from:
+//     http://www.alexdruinsky.com/pdfs/bkbound-revised.pdf
+template<typename F>
+void DruinskyToledo( Matrix<F>& A, Int n );
+template<typename F>
+void DruinskyToledo( AbstractDistMatrix<F>& A, Int n );
+
+// DynamicRegCounter
+// =================
+// An example of a well-conditioned sparse matrix that, for n >= 100, causes
+// catastrophic failure of dynamic regularization since the first n pivots are
+// all one, but the upper-left quadrant has a condition number behaving as
+// O(2^n).
+//
+// The matrix is of the form
+//
+//   A = | 4 J_{1/2}(n)^T J_{1/2}(n)   I |,
+//       |            I               -I |
+//
+// where J_{lambda}(n) is the n x n Jordan block with eigenvalue lambda.
+//
+// The upper-left corner corresponds to the matrix formed by JordanCholesky,
+// whose Cholesky factor is 2 J_{1/2}(n), which has a unit diagonal but is 
+// incredibly ill-conditioned.
+//
+template<typename T>
+void DynamicRegCounter( Matrix<T>& A, Int n );
+template<typename T>
+void DynamicRegCounter( AbstractDistMatrix<T>& A, Int n );
+template<typename T>
+void DynamicRegCounter( SparseMatrix<T>& A, Int n );
+template<typename T>
+void DynamicRegCounter( DistSparseMatrix<T>& A, Int n );
 
 // Egorov
 // ======
 template<typename Real>
 void Egorov
-( Matrix<Complex<Real>>& A, std::function<Real(Int,Int)> phase, Int n );
+( Matrix<Complex<Real>>& A, function<Real(Int,Int)> phase, Int n );
 template<typename Real>
 void Egorov
 ( AbstractDistMatrix<Complex<Real>>& A, 
-  std::function<Real(Int,Int)> phase, Int n );
+  function<Real(Int,Int)> phase, Int n );
 template<typename Real>
 void Egorov
 ( AbstractBlockDistMatrix<Complex<Real>>& A, 
-  std::function<Real(Int,Int)> phase, Int n );
+  function<Real(Int,Int)> phase, Int n );
 
 // Ehrenfest
 // =========
@@ -140,11 +190,11 @@ void ExtendedKahan( AbstractDistMatrix<F>& A, Int k, Base<F> phi, Base<F> mu );
 // Fiedler
 // =======
 template<typename F>
-void Fiedler( Matrix<F>& A, const std::vector<F>& c );
+void Fiedler( Matrix<F>& A, const vector<F>& c );
 template<typename F>
-void Fiedler( AbstractDistMatrix<F>& A, const std::vector<F>& c );
+void Fiedler( AbstractDistMatrix<F>& A, const vector<F>& c );
 template<typename F>
-void Fiedler( AbstractBlockDistMatrix<F>& A, const std::vector<F>& c );
+void Fiedler( AbstractBlockDistMatrix<F>& A, const vector<F>& c );
 
 // Forsythe
 // ========
@@ -171,6 +221,14 @@ void Fourier( AbstractDistMatrix<Complex<Real>>& A, Int n );
 template<typename Real>
 void Fourier( AbstractBlockDistMatrix<Complex<Real>>& A, Int n );
 
+// Fourier-Identity
+// ================
+// A common example of a low-coherence n x 2n matrix, [F I]
+template<typename Real>
+void FourierIdentity( Matrix<Complex<Real>>& A, Int n );
+template<typename Real>
+void FourierIdentity( AbstractDistMatrix<Complex<Real>>& A, Int n );
+
 // Greatest Common Denominator matrix
 // ==================================
 template<typename T>
@@ -188,6 +246,15 @@ template<typename T>
 void Gear( AbstractDistMatrix<T>& G, Int n, Int s, Int t );
 template<typename T>
 void Gear( AbstractBlockDistMatrix<T>& G, Int n, Int s, Int t );
+
+// Gaussian Elimination with Partial Pivoting Growth
+// =================================================
+template<typename F>
+void GEPPGrowth( Matrix<F>& A, Int n );
+template<typename F>
+void GEPPGrowth( AbstractDistMatrix<F>& A, Int n );
+template<typename F>
+void GEPPGrowth( AbstractBlockDistMatrix<F>& A, Int n );
 
 // Golub Klema Stewart matrix
 // ==========================
@@ -210,12 +277,12 @@ void Grcar( AbstractBlockDistMatrix<T>& A, Int n, Int k=3 );
 // Hankel
 // ======
 template<typename T>
-void Hankel( Matrix<T>& A, Int m, Int n, const std::vector<T>& a );
+void Hankel( Matrix<T>& A, Int m, Int n, const vector<T>& a );
 template<typename T>
-void Hankel( AbstractDistMatrix<T>& A, Int m, Int n, const std::vector<T>& a );
+void Hankel( AbstractDistMatrix<T>& A, Int m, Int n, const vector<T>& a );
 template<typename T>
 void Hankel
-( AbstractBlockDistMatrix<T>& A, Int m, Int n, const std::vector<T>& a );
+( AbstractBlockDistMatrix<T>& A, Int m, Int n, const vector<T>& a );
 
 // Hanowa
 // ======
@@ -247,13 +314,27 @@ void Helmholtz( Matrix<F>& H, Int nx, F shift );
 template<typename F>
 void Helmholtz( AbstractDistMatrix<F>& H, Int nx, F shift );
 template<typename F>
+void Helmholtz( SparseMatrix<F>& H, Int nx, F shift );
+template<typename F>
+void Helmholtz( DistSparseMatrix<F>& H, Int nx, F shift );
+
+template<typename F>
 void Helmholtz( Matrix<F>& H, Int nx, Int ny, F shift );
 template<typename F>
 void Helmholtz( AbstractDistMatrix<F>& H, Int nx, Int ny, F shift );
 template<typename F>
+void Helmholtz( SparseMatrix<F>& H, Int nx, Int ny, F shift );
+template<typename F>
+void Helmholtz( DistSparseMatrix<F>& H, Int nx, Int ny, F shift );
+
+template<typename F>
 void Helmholtz( Matrix<F>& H, Int nx, Int ny, Int nz, F shift );
 template<typename F>
 void Helmholtz( AbstractDistMatrix<F>& H, Int nx, Int ny, Int nz, F shift );
+template<typename F>
+void Helmholtz( SparseMatrix<F>& H, Int nx, Int ny, Int nz, F shift );
+template<typename F>
+void Helmholtz( DistSparseMatrix<F>& H, Int nx, Int ny, Int nz, F shift );
 
 // Helmholtz PML
 // =============
@@ -265,6 +346,14 @@ template<typename Real>
 void HelmholtzPML
 ( AbstractDistMatrix<Complex<Real>>& H, Int nx, 
   Complex<Real> omega, Int numPmlPoints=5, Real sigma=1.5, Real pmlExp=3 );
+template<typename Real>
+void HelmholtzPML
+( SparseMatrix<Complex<Real>>& H, Int nx, 
+  Complex<Real> omega, Int numPmlPoints=5, Real sigma=1.5, Real pmlExp=3 );
+template<typename Real>
+void HelmholtzPML
+( DistSparseMatrix<Complex<Real>>& H, Int nx, 
+  Complex<Real> omega, Int numPmlPoints=5, Real sigma=1.5, Real pmlExp=3 );
 
 template<typename Real>
 void HelmholtzPML
@@ -274,6 +363,14 @@ template<typename Real>
 void HelmholtzPML
 ( AbstractDistMatrix<Complex<Real>>& H, Int nx, Int ny, 
   Complex<Real> omega, Int numPmlPoints=5, Real sigma=1.5, Real pmlExp=3 );
+template<typename Real>
+void HelmholtzPML
+( SparseMatrix<Complex<Real>>& H, Int nx, Int ny, 
+  Complex<Real> omega, Int numPmlPoints=5, Real sigma=1.5, Real pmlExp=3 );
+template<typename Real>
+void HelmholtzPML
+( DistSparseMatrix<Complex<Real>>& H, Int nx, Int ny, 
+  Complex<Real> omega, Int numPmlPoints=5, Real sigma=1.5, Real pmlExp=3 );
 
 template<typename Real>
 void HelmholtzPML
@@ -282,6 +379,14 @@ void HelmholtzPML
 template<typename Real>
 void HelmholtzPML
 ( AbstractDistMatrix<Complex<Real>>& H, Int nx, Int ny, Int nz, 
+  Complex<Real> omega, Int numPmlPoints=5, Real sigma=1.5, Real pmlExp=3 );
+template<typename Real>
+void HelmholtzPML
+( SparseMatrix<Complex<Real>>& H, Int nx, Int ny, Int nz, 
+  Complex<Real> omega, Int numPmlPoints=5, Real sigma=1.5, Real pmlExp=3 );
+template<typename Real>
+void HelmholtzPML
+( DistSparseMatrix<Complex<Real>>& H, Int nx, Int ny, Int nz, 
   Complex<Real> omega, Int numPmlPoints=5, Real sigma=1.5, Real pmlExp=3 );
 
 // Hermitian from EVD
@@ -319,6 +424,10 @@ template<typename T>
 void Identity( AbstractDistMatrix<T>& I, Int m, Int n );
 template<typename T> 
 void Identity( AbstractBlockDistMatrix<T>& I, Int m, Int n );
+template<typename T> 
+void Identity( SparseMatrix<T>& I, Int m, Int n );
+template<typename T> 
+void Identity( DistSparseMatrix<T>& I, Int m, Int n );
 
 // Jordan
 // ======
@@ -328,6 +437,20 @@ template<typename T>
 void Jordan( AbstractDistMatrix<T>& J, Int n, T lambda );
 template<typename T>
 void Jordan( AbstractBlockDistMatrix<T>& J, Int n, T lambda );
+
+// JordanCholesky
+// ==============
+// Set A = 4 J_{1/2}(n)^T J_{1/2}(n), which has is tridiagonal with its main
+// diagonal equal to five everywhere but the top-left entry, and its sub and
+// super-diagonals equal to 2.
+template<typename T>
+void JordanCholesky( Matrix<T>& A, Int n );
+template<typename T>
+void JordanCholesky( AbstractDistMatrix<T>& A, Int n );
+template<typename T>
+void JordanCholesky( SparseMatrix<T>& A, Int n );
+template<typename T>
+void JordanCholesky( DistSparseMatrix<T>& A, Int n );
 
 // Kahan
 // =====
@@ -353,16 +476,28 @@ template<typename F>
 void Laplacian( Matrix<F>& L, Int nx );
 template<typename F>
 void Laplacian( AbstractDistMatrix<F>& L, Int nx );
+template<typename F>
+void Laplacian( SparseMatrix<F>& L, Int nx );
+template<typename F>
+void Laplacian( DistSparseMatrix<F>& L, Int nx );
 
 template<typename F>
 void Laplacian( Matrix<F>& L, Int nx, Int ny );
 template<typename F>
 void Laplacian( AbstractDistMatrix<F>& L, Int nx, Int ny );
+template<typename F>
+void Laplacian( SparseMatrix<F>& L, Int nx, Int ny );
+template<typename F>
+void Laplacian( DistSparseMatrix<F>& L, Int nx, Int ny );
 
 template<typename F>
 void Laplacian( Matrix<F>& L, Int nx, Int ny, Int nz );
 template<typename F>
 void Laplacian( AbstractDistMatrix<F>& L, Int nx, Int ny, Int nz );
+template<typename F>
+void Laplacian( SparseMatrix<F>& L, Int nx, Int ny, Int nz );
+template<typename F>
+void Laplacian( DistSparseMatrix<F>& L, Int nx, Int ny, Int nz );
 
 // Lauchli
 // =======
@@ -428,6 +563,12 @@ template<typename T>
 void Ones( AbstractDistMatrix<T>& A, Int m, Int n );
 template<typename T>
 void Ones( AbstractBlockDistMatrix<T>& A, Int m, Int n );
+template<typename T>
+void Ones( DistMultiVec<T>& A, Int m, Int n );
+template<typename T>
+void Ones( SparseMatrix<T>& A, Int m, Int n );
+template<typename T>
+void Ones( DistSparseMatrix<T>& A, Int m, Int n );
 
 // 1-2-1 matrix
 // ============
@@ -464,15 +605,6 @@ template<typename T>
 void Redheffer( AbstractDistMatrix<T>& R, Int n );
 template<typename T>
 void Redheffer( AbstractBlockDistMatrix<T>& R, Int n );
-
-// Riemann
-// =======
-template<typename T>
-void Riemann( Matrix<T>& R, Int n );
-template<typename T>
-void Riemann( AbstractDistMatrix<T>& R, Int n );
-template<typename T>
-void Riemann( AbstractBlockDistMatrix<T>& R, Int n );
 
 // Riffle
 // ======
@@ -518,22 +650,22 @@ void Ris( AbstractBlockDistMatrix<F>& R, Int n );
 // ========
 template<typename S,typename T>
 void Toeplitz
-( Matrix<S>& A, Int m, Int n, const std::vector<T>& a );
+( Matrix<S>& A, Int m, Int n, const vector<T>& a );
 template<typename S,typename T>
 void Toeplitz
-( AbstractDistMatrix<S>& A, Int m, Int n, const std::vector<T>& a );
+( AbstractDistMatrix<S>& A, Int m, Int n, const vector<T>& a );
 template<typename S,typename T>
 void Toeplitz
-( AbstractBlockDistMatrix<S>& A, Int m, Int n, const std::vector<T>& a );
+( AbstractBlockDistMatrix<S>& A, Int m, Int n, const vector<T>& a );
 
-// Trefethen
-// =========
+// Trefethen-Embree
+// ================
 template<typename Real>
-void Trefethen( Matrix<Complex<Real>>& A, Int n );
+void TrefethenEmbree( Matrix<Complex<Real>>& A, Int n );
 template<typename Real>
-void Trefethen( AbstractDistMatrix<Complex<Real>>& A, Int n );
+void TrefethenEmbree( AbstractDistMatrix<Complex<Real>>& A, Int n );
 template<typename Real>
-void Trefethen( AbstractBlockDistMatrix<Complex<Real>>& A, Int n );
+void TrefethenEmbree( AbstractBlockDistMatrix<Complex<Real>>& A, Int n );
 
 // Triangle
 // ========
@@ -547,11 +679,11 @@ void Triangle( AbstractBlockDistMatrix<F>& A, Int n );
 // TriW
 // ====
 template<typename T>
-void TriW( Matrix<T>& A, Int m, Int n, T alpha, Int k );
+void TriW( Matrix<T>& A, Int n, T alpha, Int k );
 template<typename T>
-void TriW( AbstractDistMatrix<T>& A, Int m, Int n, T alpha, Int k );
+void TriW( AbstractDistMatrix<T>& A, Int n, T alpha, Int k );
 template<typename T>
-void TriW( AbstractBlockDistMatrix<T>& A, Int m, Int n, T alpha, Int k );
+void TriW( AbstractBlockDistMatrix<T>& A, Int n, T alpha, Int k );
 
 // Walsh
 // =====
@@ -559,6 +691,13 @@ template<typename T>
 void Walsh( Matrix<T>& A, Int k, bool binary=false );
 template<typename T>
 void Walsh( AbstractDistMatrix<T>& A, Int k, bool binary=false );
+
+// Walsh-Identity
+// ==============
+template<typename T>
+void WalshIdentity( Matrix<T>& A, Int k, bool binary=false );
+template<typename T>
+void WalshIdentity( AbstractDistMatrix<T>& A, Int k, bool binary=false );
 
 // Whale
 // =====
@@ -584,9 +723,24 @@ template<typename T>
 void Zeros( AbstractDistMatrix<T>& A, Int m, Int n );
 template<typename T>
 void Zeros( AbstractBlockDistMatrix<T>& A, Int m, Int n );
+template<typename T>
+void Zeros( SparseMatrix<T>& A, Int m, Int n );
+template<typename T>
+void Zeros( DistSparseMatrix<T>& A, Int m, Int n );
+template<typename T>
+void Zeros( DistMultiVec<T>& A, Int m, Int n );
 
 // Random
 // ######
+
+// Bernoulli
+// =========
+template<typename T>
+void Bernoulli( Matrix<T>& A, Int m, Int n );
+template<typename T>
+void Bernoulli( AbstractDistMatrix<T>& A, Int m, Int n );
+template<typename T>
+void Bernoulli( AbstractBlockDistMatrix<T>& A, Int m, Int n );
 
 // Gaussian
 // ========
@@ -597,6 +751,8 @@ void MakeGaussian( AbstractDistMatrix<F>& A, F mean=0, Base<F> stddev=1 );
 template<typename F>
 void MakeGaussian
 ( AbstractBlockDistMatrix<F>& A, F mean=0, Base<F> stddev=1 );
+template<typename F>
+void MakeGaussian( DistMultiVec<F>& A, F mean=0, Base<F> stddev=1 );
 
 template<typename F>
 void Gaussian( Matrix<F>& A, Int m, Int n, F mean=0, Base<F> stddev=1 );
@@ -606,6 +762,9 @@ void Gaussian
 template<typename F>
 void Gaussian
 ( AbstractBlockDistMatrix<F>& A, Int m, Int n, F mean=0, Base<F> stddev=1 );
+template<typename F>
+void Gaussian
+( DistMultiVec<F>& A, Int m, Int n, F mean=0, Base<F> stddev=1 );
 
 // Haar
 // ====
@@ -641,6 +800,15 @@ void NormalUniformSpectrum
 ( AbstractDistMatrix<Complex<Real>>& A, Int n,
   Complex<Real> center=0, Real radius=1 );
 
+// Three-valued
+// ============
+template<typename T>
+void ThreeValued( Matrix<T>& A, Int m, Int n, double p=2./3. );
+template<typename T>
+void ThreeValued( AbstractDistMatrix<T>& A, Int m, Int n, double p=2./3. );
+template<typename T>
+void ThreeValued( AbstractBlockDistMatrix<T>& A, Int m, Int n, double p=2./3. );
+
 // Uniform
 // =======
 // Draw each entry from a uniform PDF over a closed ball.
@@ -650,6 +818,8 @@ template<typename T>
 void MakeUniform( AbstractDistMatrix<T>& A, T center=0, Base<T> radius=1 );
 template<typename T>
 void MakeUniform( AbstractBlockDistMatrix<T>& A, T center=0, Base<T> radius=1 );
+template<typename T>
+void MakeUniform( DistMultiVec<T>& X, T center=0, Base<T> radius=1 );
 
 template<typename T>
 void Uniform( Matrix<T>& A, Int m, Int n, T center=0, Base<T> radius=1 );
@@ -659,6 +829,8 @@ void Uniform
 template<typename T>
 void Uniform
 ( AbstractBlockDistMatrix<T>& A, Int m, Int n, T center=0, Base<T> radius=1 );
+template<typename T>
+void Uniform( DistMultiVec<T>& X, Int m, Int n, T center=0, Base<T> radius=1 );
 
 // Uniform Helmholtz Green's
 // =========================

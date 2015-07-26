@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -11,64 +11,92 @@
 #define EL_IMPORTS_LAPACK_HPP
 
 namespace El {
+
 namespace lapack {
 
 // Machine constants
 // =================
 
 // Relative machine precision
-template<typename R> R MachineEpsilon();
+template<typename R=double> R MachineEpsilon();
 template<> float MachineEpsilon<float>();
 template<> double MachineEpsilon<double>();
 
 // Minimum number which can be inverted without overflow
-template<typename R> R MachineSafeMin();
+template<typename R=double> R MachineSafeMin();
 template<> float MachineSafeMin<float>();
 template<> double MachineSafeMin<double>();
 
 // Base of the machine, where the number is represented as 
 //   (mantissa) x (base)^(exponent)
-template<typename R> R MachineBase();
+template<typename R=double> R MachineBase();
 template<> float MachineBase<float>();
 template<> double MachineBase<double>();
 
 // Return the relative machine precision multiplied by the base
-template<typename R> R MachinePrecision();
+template<typename R=double> R MachinePrecision();
 template<> float MachinePrecision<float>();
 template<> double MachinePrecision<double>();
 
 // Return the minimum exponent before (gradual) underflow occurs
-template<typename R> R MachineUnderflowExponent();
+template<typename R=double> R MachineUnderflowExponent();
 template<> float MachineUnderflowExponent<float>();
 template<> double MachineUnderflowExponent<double>();
 
 // Return the underflow threshold: (base)^((underflow exponent)-1)
-template<typename R> R MachineUnderflowThreshold();
+template<typename R=double> R MachineUnderflowThreshold();
 template<> float MachineUnderflowThreshold<float>();
 template<> double MachineUnderflowThreshold<double>();
 
 // Return the largest exponent before overflow
-template<typename R> R MachineOverflowExponent();
+template<typename R=double> R MachineOverflowExponent();
 template<> float MachineOverflowExponent<float>();
 template<> double MachineOverflowExponent<double>();
 
 // Return the overflow threshold: (1-(rel. prec.)) * (base)^(overflow exponent)
-template<typename R> R MachineOverflowThreshold();
+template<typename R=double> R MachineOverflowThreshold();
 template<> float MachineOverflowThreshold<float>();
 template<> double MachineOverflowThreshold<double>();
 
+// For copying column-major matrices
+// =================================
+template<typename T>
+void Copy
+( char uplo, BlasInt m, BlasInt n, 
+  const T* A, BlasInt lda, T* B, BlasInt ldb );
+
+void Copy
+( char uplo, BlasInt m, BlasInt n, 
+  const float* A, BlasInt lda, float* B, BlasInt ldb );
+void Copy
+( char uplo, BlasInt m, BlasInt n, 
+  const double* A, BlasInt lda, double* B, BlasInt ldb );
+void Copy
+( char uplo, BlasInt m, BlasInt n, 
+  const scomplex* A, BlasInt lda, scomplex* B, BlasInt ldb );
+void Copy
+( char uplo, BlasInt m, BlasInt n, 
+  const dcomplex* A, BlasInt lda, dcomplex* B, BlasInt ldb );
+template<typename T>
+void Copy
+( char uplo, BlasInt m, BlasInt n, 
+  const T* A, BlasInt lda, T* B, BlasInt ldb );
+
 // For safely computing norms without overflow/underflow
 // =====================================================
+
+template<typename Real>
+Real SafeNorm( Real alpha, Real beta );
 
 float SafeNorm( float alpha, float beta );
 double SafeNorm( double alpha, double beta );
 float SafeNorm( float alpha, float beta, float gamma );
 double SafeNorm( double alpha, double beta, double gamma );
 
-float SafeNorm( Complex<float> alpha, float beta );
-double SafeNorm( Complex<double> alpha, double beta );
-float SafeNorm( float alpha, Complex<float> beta );
-double SafeNorm( double alpha, Complex<double> beta );
+float SafeNorm( scomplex alpha, float beta );
+double SafeNorm( dcomplex alpha, double beta );
+float SafeNorm( float alpha, scomplex beta );
+double SafeNorm( double alpha, dcomplex beta );
 
 // Givens rotations
 // ================
@@ -96,27 +124,27 @@ dcomplex Givens( dcomplex phi, dcomplex gamma, double* c, dcomplex* s );
 // All eigenvalues
 // ^^^^^^^^^^^^^^^
 void SymmetricTridiagEig
-( int n, float* d, float* e, float* w, float abstol=0 );
+( BlasInt n, float* d, float* e, float* w, float abstol=0 );
 void SymmetricTridiagEig
-( int n, double* d, double* e, double* w, double abstol=0 );
+( BlasInt n, double* d, double* e, double* w, double abstol=0 );
 
 // Floating-point range
 // ^^^^^^^^^^^^^^^^^^^^
-int SymmetricTridiagEig
-( int n, float* d, float* e, float* w, 
+BlasInt SymmetricTridiagEig
+( BlasInt n, float* d, float* e, float* w, 
   float vl, float vu, float abstol=0 );
-int SymmetricTridiagEig
-( int n, double* d, double* e, double* w, 
+BlasInt SymmetricTridiagEig
+( BlasInt n, double* d, double* e, double* w, 
   double vl, double vu, double abstol=0 );
 
 // Index range
 // ^^^^^^^^^^^
 void SymmetricTridiagEig
-( int n, float* d, float* e, float* w,
-  int il, int iu, float abstol=0 );
+( BlasInt n, float* d, float* e, float* w,
+  BlasInt il, BlasInt iu, float abstol=0 );
 void SymmetricTridiagEig
-( int n, double* d, double* e, double* w,
-  int il, int iu, double abstol=0 );
+( BlasInt n, double* d, double* e, double* w,
+  BlasInt il, BlasInt iu, double abstol=0 );
 
 // Compute eigenpairs
 // ------------------
@@ -124,27 +152,29 @@ void SymmetricTridiagEig
 // All eigenpairs
 // ^^^^^^^^^^^^^^
 void SymmetricTridiagEig
-( int n, float* d, float* e, float* w, float* Z, int ldZ, float abstol=0 );
+( BlasInt n, 
+  float* d, float* e, float* w, float* Z, BlasInt ldZ, float abstol=0 );
 void SymmetricTridiagEig
-( int n, double* d, double* e, double* w, double* Z, int ldZ, double abstol=0 );
+( BlasInt n, 
+  double* d, double* e, double* w, double* Z, BlasInt ldZ, double abstol=0 );
 
 // Floating-point range
 // ^^^^^^^^^^^^^^^^^^^^
-int SymmetricTridiagEig
-( int n, float* d, float* e, float* w, float* Z, int ldZ,
+BlasInt SymmetricTridiagEig
+( BlasInt n, float* d, float* e, float* w, float* Z, BlasInt ldZ,
   float vl, float vu, float abstol=0 );
-int SymmetricTridiagEig
-( int n, double* d, double* e, double* w, double* Z, int ldZ,
+BlasInt SymmetricTridiagEig
+( BlasInt n, double* d, double* e, double* w, double* Z, BlasInt ldZ,
   double vl, double vu, double abstol=0 );
 
 // Index range
 // ^^^^^^^^^^^
 void SymmetricTridiagEig
-( int n, float* d, float* e, float* w, float* Z, int ldZ,
-  int il, int iu, float abstol=0 );
+( BlasInt n, float* d, float* e, float* w, float* Z, BlasInt ldZ,
+  BlasInt il, BlasInt iu, float abstol=0 );
 void SymmetricTridiagEig
-( int n, double* d, double* e, double* w, double* Z, int ldZ,
-  int il, int iu, double abstol=0 );
+( BlasInt n, double* d, double* e, double* w, double* Z, BlasInt ldZ,
+  BlasInt il, BlasInt iu, double abstol=0 );
 
 // Compute the eigen-values/pairs of a Hermitian matrix
 // ====================================================
@@ -155,43 +185,43 @@ void SymmetricTridiagEig
 // All eigenvalues
 // ^^^^^^^^^^^^^^^
 void HermitianEig
-( char uplo, int n, float* A, int ldA, float* w, float abstol=0 );
+( char uplo, BlasInt n, float* A, BlasInt ldA, float* w, float abstol=0 );
 void HermitianEig
-( char uplo, int n, double* A, int ldA, double* w, double abstol=0 );
+( char uplo, BlasInt n, double* A, BlasInt ldA, double* w, double abstol=0 );
 void HermitianEig
-( char uplo, int n, scomplex* A, int ldA, float* w, float abstol=0 );
+( char uplo, BlasInt n, scomplex* A, BlasInt ldA, float* w, float abstol=0 );
 void HermitianEig
-( char uplo, int n, dcomplex* A, int ldA, double* w, double abstol=0 );
+( char uplo, BlasInt n, dcomplex* A, BlasInt ldA, double* w, double abstol=0 );
 
 // Floating-point range
 // ^^^^^^^^^^^^^^^^^^^^
-int HermitianEig
-( char uplo, int n, float* A, int ldA, float* w,
+BlasInt HermitianEig
+( char uplo, BlasInt n, float* A, BlasInt ldA, float* w,
   float vl, float vu, float abstol=0 );
-int HermitianEig
-( char uplo, int n, double* A, int ldA, double* w,
+BlasInt HermitianEig
+( char uplo, BlasInt n, double* A, BlasInt ldA, double* w,
   double vl, double vu, double abstol=0 );
-int HermitianEig
-( char uplo, int n, scomplex* A, int ldA, float* w,
+BlasInt HermitianEig
+( char uplo, BlasInt n, scomplex* A, BlasInt ldA, float* w,
   float vl, float vu, float abstol=0 );
-int HermitianEig
-( char uplo, int n, dcomplex* A, int ldA, double* w,
+BlasInt HermitianEig
+( char uplo, BlasInt n, dcomplex* A, BlasInt ldA, double* w,
   double vl, double vu, double abstol=0 );
 
 // Index range
 // ^^^^^^^^^^^
 void HermitianEig
-( char uplo, int n, float* A, int ldA, float* w,
-  int il, int iu, float abstol=0 );
+( char uplo, BlasInt n, float* A, BlasInt ldA, float* w,
+  BlasInt il, BlasInt iu, float abstol=0 );
 void HermitianEig
-( char uplo, int n, double* A, int ldA, double* w,
-  int il, int iu, double abstol=0 );
+( char uplo, BlasInt n, double* A, BlasInt ldA, double* w,
+  BlasInt il, BlasInt iu, double abstol=0 );
 void HermitianEig
-( char uplo, int n, scomplex* A, int ldA, float* w,
-  int il, int iu, float abstol=0 );
+( char uplo, BlasInt n, scomplex* A, BlasInt ldA, float* w,
+  BlasInt il, BlasInt iu, float abstol=0 );
 void HermitianEig
-( char uplo, int n, dcomplex* A, int ldA, double* w,
-  int il, int iu, double abstol=0 );
+( char uplo, BlasInt n, dcomplex* A, BlasInt ldA, double* w,
+  BlasInt il, BlasInt iu, double abstol=0 );
 
 // Compute eigenpairs
 // ------------------
@@ -199,142 +229,154 @@ void HermitianEig
 // All eigenpairs
 // ^^^^^^^^^^^^^^
 void HermitianEig
-( char uplo, int n, float* A, int ldA, float* w, float* Z, int ldZ,
+( char uplo, BlasInt n, 
+  float* A, BlasInt ldA, float* w, float* Z, BlasInt ldZ,
   float abstol=0 );
 void HermitianEig
-( char uplo, int n, double* A, int ldA, double* w, double* Z, int ldZ,
+( char uplo, BlasInt n, 
+  double* A, BlasInt ldA, double* w, double* Z, BlasInt ldZ,
   double abstol=0 );
 void HermitianEig
-( char uplo, int n, scomplex* A, int ldA, float* w, scomplex* Z, int ldZ,
+( char uplo, BlasInt n, 
+  scomplex* A, BlasInt ldA, float* w, scomplex* Z, BlasInt ldZ,
   float abstol=0 );
 void HermitianEig
-( char uplo, int n, dcomplex* A, int ldA, double* w, dcomplex* Z, int ldZ,
+( char uplo, BlasInt n, 
+  dcomplex* A, BlasInt ldA, double* w, dcomplex* Z, BlasInt ldZ,
   double abstol=0 );
 
 // Floating-point range
 // ^^^^^^^^^^^^^^^^^^^^
-int HermitianEig
-( char uplo, int n, float* A, int ldA, float* w, float* Z, int ldZ,
+BlasInt HermitianEig
+( char uplo, BlasInt n, 
+  float* A, BlasInt ldA, float* w, float* Z, BlasInt ldZ,
   float vl, float vu, float abstol=0 );
-int HermitianEig
-( char uplo, int n, double* A, int ldA, double* w, double* Z, int ldZ,
+BlasInt HermitianEig
+( char uplo, BlasInt n, 
+  double* A, BlasInt ldA, double* w, double* Z, BlasInt ldZ,
   double vl, double vu, double abstol=0 );
-int HermitianEig
-( char uplo, int n, scomplex* A, int ldA, float* w, scomplex* Z, int ldZ,
+BlasInt HermitianEig
+( char uplo, BlasInt n, 
+  scomplex* A, BlasInt ldA, float* w, scomplex* Z, BlasInt ldZ,
   float vl, float vu, float abstol=0 );
-int HermitianEig
-( char uplo, int n, dcomplex* A, int ldA, double* w, dcomplex* Z, int ldZ,
+BlasInt HermitianEig
+( char uplo, BlasInt n, 
+  dcomplex* A, BlasInt ldA, double* w, dcomplex* Z, BlasInt ldZ,
   double vl, double vu, double abstol=0 );
 
 // Index range
 // ^^^^^^^^^^^
 void HermitianEig
-( char uplo, int n, float* A, int ldA, float* w, float* Z, int ldZ,
-  int il, int iu, float abstol=0 );
+( char uplo, BlasInt n, 
+  float* A, BlasInt ldA, float* w, float* Z, BlasInt ldZ,
+  BlasInt il, BlasInt iu, float abstol=0 );
 void HermitianEig
-( char uplo, int n, double* A, int ldA, double* w, double* Z, int ldZ,
-  int il, int iu, double abstol=0 );
+( char uplo, BlasInt n, 
+  double* A, BlasInt ldA, double* w, double* Z, BlasInt ldZ,
+  BlasInt il, BlasInt iu, double abstol=0 );
 void HermitianEig
-( char uplo, int n, scomplex* A, int ldA, float* w, scomplex* Z, int ldZ,
-  int il, int iu, float abstol=0 );
+( char uplo, BlasInt n, 
+  scomplex* A, BlasInt ldA, float* w, scomplex* Z, BlasInt ldZ,
+  BlasInt il, BlasInt iu, float abstol=0 );
 void HermitianEig
-( char uplo, int n, dcomplex* A, int ldA, double* w, dcomplex* Z, int ldZ,
-  int il, int iu, double abstol=0 );
+( char uplo, BlasInt n, 
+  dcomplex* A, BlasInt ldA, double* w, dcomplex* Z, BlasInt ldZ,
+  BlasInt il, BlasInt iu, double abstol=0 );
 
 // Compute the SVD of a general matrix using a divide and conquer algorithm
 // ========================================================================
 
 void DivideAndConquerSVD
-( int m, int n, float* A, int ldA, 
-  float* s, float* U, int ldU, float* VT, int ldVT );
+( BlasInt m, BlasInt n, float* A, BlasInt ldA, 
+  float* s, float* U, BlasInt ldU, float* VT, BlasInt ldVT );
 void DivideAndConquerSVD
-( int m, int n, double* A, int ldA, 
-  double* s, double* U, int ldU, double* VT, int ldVT );
+( BlasInt m, BlasInt n, double* A, BlasInt ldA, 
+  double* s, double* U, BlasInt ldU, double* VT, BlasInt ldVT );
 void DivideAndConquerSVD
-( int m, int n, scomplex* A, int ldA, 
-  float* s, scomplex* U, int ldU, scomplex* VH, int ldVH );
+( BlasInt m, BlasInt n, scomplex* A, BlasInt ldA, 
+  float* s, scomplex* U, BlasInt ldU, scomplex* VH, BlasInt ldVH );
 void DivideAndConquerSVD
-( int m, int n, dcomplex* A, int ldA, 
-  double* s, dcomplex* U, int ldU, dcomplex* VH, int ldVH );
+( BlasInt m, BlasInt n, dcomplex* A, BlasInt ldA, 
+  double* s, dcomplex* U, BlasInt ldU, dcomplex* VH, BlasInt ldVH );
 
 // Compute the SVD of a general matrix using the QR algorithm
 // ==========================================================
 
 void QRSVD
-( int m, int n, float* A, int ldA, 
-  float* s, float* U, int ldU, float* VT, int ldVT );
+( BlasInt m, BlasInt n, float* A, BlasInt ldA, 
+  float* s, float* U, BlasInt ldU, float* VT, BlasInt ldVT );
 void QRSVD
-( int m, int n, double* A, int ldA, 
-  double* s, double* U, int ldU, double* VT, int ldVT );
+( BlasInt m, BlasInt n, double* A, BlasInt ldA, 
+  double* s, double* U, BlasInt ldU, double* VT, BlasInt ldVT );
 void QRSVD
-( int m, int n, scomplex* A, int ldA, 
-  float* s, scomplex* U, int ldU, scomplex* VH, int ldVH );
+( BlasInt m, BlasInt n, scomplex* A, BlasInt ldA, 
+  float* s, scomplex* U, BlasInt ldU, scomplex* VH, BlasInt ldVH );
 void QRSVD
-( int m, int n, dcomplex* A, int ldA, 
-  double* s, dcomplex* U, int ldU, dcomplex* VH, int ldVH );
+( BlasInt m, BlasInt n, dcomplex* A, BlasInt ldA, 
+  double* s, dcomplex* U, BlasInt ldU, dcomplex* VH, BlasInt ldVH );
 
 // Compute the singular values of a general matrix (using the QR algorithm)
 // ========================================================================
 
-void SVD( int m, int n, float* A, int ldA, float* s );
-void SVD( int m, int n, double* A, int ldA, double* s );
-void SVD( int m, int n, scomplex* A, int ldA, float* s );
-void SVD( int m, int n, dcomplex* A, int ldA, double* s );
+void SVD( BlasInt m, BlasInt n, float* A, BlasInt ldA, float* s );
+void SVD( BlasInt m, BlasInt n, double* A, BlasInt ldA, double* s );
+void SVD( BlasInt m, BlasInt n, scomplex* A, BlasInt ldA, float* s );
+void SVD( BlasInt m, BlasInt n, dcomplex* A, BlasInt ldA, double* s );
 
 // Compute the singular values of a bidiagonal matrix via dqds
 // ===========================================================
 
-void BidiagDQDS( int n, float* d, float* e );
-void BidiagDQDS( int n, double* d, double* e );
+void BidiagDQDS( BlasInt n, float* d, float* e );
+void BidiagDQDS( BlasInt n, double* d, double* e );
 
 // Compute the SVD of a bidiagonal matrix using the QR algorithm
 // =============================================================
 
 void BidiagQRAlg
-( char uplo, int n, int numColsVT, int numRowsU,
-  float* d, float* e, float* VT, int ldVT, float* U, int ldU );
+( char uplo, BlasInt n, BlasInt numColsVT, BlasInt numRowsU,
+  float* d, float* e, float* VT, BlasInt ldVT, float* U, BlasInt ldU );
 void BidiagQRAlg
-( char uplo, int n, int numColsVT, int numRowsU, 
-  double* d, double* e, double* VT, int ldVT, double* U, int ldU );
+( char uplo, BlasInt n, BlasInt numColsVT, BlasInt numRowsU, 
+  double* d, double* e, double* VT, BlasInt ldVT, double* U, BlasInt ldU );
 void BidiagQRAlg
-( char uplo, int n, int numColsVH, int numRowsU,
-  float* d, float* e, scomplex* VH, int ldVH, scomplex* U, int ldU );
+( char uplo, BlasInt n, BlasInt numColsVH, BlasInt numRowsU,
+  float* d, float* e, scomplex* VH, BlasInt ldVH, scomplex* U, BlasInt ldU );
 void BidiagQRAlg
-( char uplo, int n, int numColsVH, int numRowsU, 
-  double* d, double* e, dcomplex* VH, int ldVH, dcomplex* U, int ldU );
+( char uplo, BlasInt n, BlasInt numColsVH, BlasInt numRowsU, 
+  double* d, double* e, dcomplex* VH, BlasInt ldVH, dcomplex* U, BlasInt ldU );
 
 // Compute the Schur decomposition of an upper Hessenberg matrix
 // =============================================================
 
 void HessenbergSchur
-( int n, float* H, int ldH, scomplex* w, bool fullTriangle=false );
+( BlasInt n, float* H, BlasInt ldH, scomplex* w, bool fullTriangle=false );
 void HessenbergSchur
-( int n, double* H, int ldH, dcomplex* w, bool fullTriangle=false );
+( BlasInt n, double* H, BlasInt ldH, dcomplex* w, bool fullTriangle=false );
 void HessenbergSchur
-( int n, scomplex* H, int ldH, scomplex* w, bool fullTriangle=false );
+( BlasInt n, scomplex* H, BlasInt ldH, scomplex* w, bool fullTriangle=false );
 void HessenbergSchur
-( int n, dcomplex* H, int ldH, dcomplex* w, bool fullTriangle=false );
+( BlasInt n, dcomplex* H, BlasInt ldH, dcomplex* w, bool fullTriangle=false );
 
 void HessenbergSchur
-( int n, float* H, int ldH, scomplex* w, float* Q, int ldQ, 
+( BlasInt n, float* H, BlasInt ldH, scomplex* w, float* Q, BlasInt ldQ, 
   bool fullTriangle=true, bool multiplyQ=false );
 void HessenbergSchur
-( int n, double* H, int ldH, dcomplex* w, double* Q, int ldQ, 
+( BlasInt n, double* H, BlasInt ldH, dcomplex* w, double* Q, BlasInt ldQ, 
   bool fullTriangle=true, bool multiplyQ=false );
 void HessenbergSchur
-( int n, scomplex* H, int ldH, scomplex* w, scomplex* Q, int ldQ, 
+( BlasInt n, scomplex* H, BlasInt ldH, scomplex* w, scomplex* Q, BlasInt ldQ, 
   bool fullTriangle=false, bool multiplyQ=false );
 void HessenbergSchur
-( int n, dcomplex* H, int ldH, dcomplex* w, dcomplex* Q, int ldQ, 
+( BlasInt n, dcomplex* H, BlasInt ldH, dcomplex* w, dcomplex* Q, BlasInt ldQ, 
   bool fullTriangle=false, bool multiplyQ=false );
 
 // Compute the eigenvalues/pairs of an upper Hessenberg matrix
 // ===========================================================
 
-void HessenbergEig( int n, float* H, int ldH, scomplex* w );
-void HessenbergEig( int n, double* H, int ldH, dcomplex* w );
-void HessenbergEig( int n, scomplex* H, int ldH, scomplex* w );
-void HessenbergEig( int n, dcomplex* H, int ldH, dcomplex* w );
+void HessenbergEig( BlasInt n, float* H, BlasInt ldH, scomplex* w );
+void HessenbergEig( BlasInt n, double* H, BlasInt ldH, dcomplex* w );
+void HessenbergEig( BlasInt n, scomplex* H, BlasInt ldH, scomplex* w );
+void HessenbergEig( BlasInt n, dcomplex* H, BlasInt ldH, dcomplex* w );
 
 // TODO: A version which computes eigenvectors
 
@@ -342,43 +384,63 @@ void HessenbergEig( int n, dcomplex* H, int ldH, dcomplex* w );
 // ==================================================
 
 void Schur
-( int n, float* A, int ldA, scomplex* w, bool fullTriangle=false );
+( BlasInt n, float* A, BlasInt ldA, scomplex* w, bool fullTriangle=false );
 void Schur
-( int n, double* A, int ldA, dcomplex* w, bool fullTriangle=false );
+( BlasInt n, double* A, BlasInt ldA, dcomplex* w, bool fullTriangle=false );
 void Schur
-( int n, scomplex* A, int ldA, scomplex* w, bool fullTriangle=false );
+( BlasInt n, scomplex* A, BlasInt ldA, scomplex* w, bool fullTriangle=false );
 void Schur
-( int n, dcomplex* A, int ldA, dcomplex* w, bool fullTriangle=false );
+( BlasInt n, dcomplex* A, BlasInt ldA, dcomplex* w, bool fullTriangle=false );
 
 void Schur
-( int n, float* A, int ldA, scomplex* w, float* Q, int ldQ, 
+( BlasInt n, float* A, BlasInt ldA, scomplex* w, float* Q, BlasInt ldQ, 
   bool fullTriangle=true );
 void Schur
-( int n, double* A, int ldA, dcomplex* w, double* Q, int ldQ, 
+( BlasInt n, double* A, BlasInt ldA, dcomplex* w, double* Q, BlasInt ldQ, 
   bool fullTriangle=true );
 void Schur
-( int n, scomplex* A, int ldA, scomplex* w, scomplex* Q, int ldQ, 
+( BlasInt n, scomplex* A, BlasInt ldA, scomplex* w, scomplex* Q, BlasInt ldQ, 
   bool fullTriangle=true );
 void Schur
-( int n, dcomplex* A, int ldA, dcomplex* w, dcomplex* Q, int ldQ, 
+( BlasInt n, dcomplex* A, BlasInt ldA, dcomplex* w, dcomplex* Q, BlasInt ldQ, 
   bool fullTriangle=true );
 
 // Compute the eigenvalues/pairs of a square matrix
 // ================================================
 
-void Eig( int n, float* A, int ldA, scomplex* w );
-void Eig( int n, double* A, int ldA, dcomplex* w );
-void Eig( int n, scomplex* A, int ldA, scomplex* w );
-void Eig( int n, dcomplex* A, int ldA, dcomplex* w );
+void Eig( BlasInt n, float* A, BlasInt ldA, scomplex* w );
+void Eig( BlasInt n, double* A, BlasInt ldA, dcomplex* w );
+void Eig( BlasInt n, scomplex* A, BlasInt ldA, scomplex* w );
+void Eig( BlasInt n, dcomplex* A, BlasInt ldA, dcomplex* w );
 
-void Eig( int n, float* A, int ldA, scomplex* w, scomplex* X, int ldX );
-void Eig( int n, float* A, int ldA, scomplex* w, float* XPacked, int ldX );
-void Eig( int n, double* A, int ldA, dcomplex* w, dcomplex* X, int ldX );
-void Eig( int n, double* A, int ldA, dcomplex* w, double* XPacked, int ldX );
-void Eig( int n, scomplex* A, int ldA, scomplex* w, scomplex* X, int ldX );
-void Eig( int n, dcomplex* A, int ldA, dcomplex* w, dcomplex* X, int ldX );
+void Eig
+( BlasInt n, 
+  float* A, BlasInt ldA, scomplex* w, scomplex* X, BlasInt ldX );
+void Eig
+( BlasInt n, 
+  float* A, BlasInt ldA, scomplex* w, float* XPacked, BlasInt ldX );
+void Eig
+( BlasInt n, 
+  double* A, BlasInt ldA, dcomplex* w, dcomplex* X, BlasInt ldX );
+void Eig
+( BlasInt n, 
+  double* A, BlasInt ldA, dcomplex* w, double* XPacked, BlasInt ldX );
+void Eig
+( BlasInt n, 
+  scomplex* A, BlasInt ldA, scomplex* w, scomplex* X, BlasInt ldX );
+void Eig
+( BlasInt n, 
+  dcomplex* A, BlasInt ldA, dcomplex* w, dcomplex* X, BlasInt ldX );
 
 } // namespace lapack
+
+template<typename Real>
+inline Real Epsilon() { return lapack::MachineEpsilon<Real>(); }
+#ifdef EL_HAVE_QUAD
+template<>
+inline Quad Epsilon<Quad>() { return Quad(9.63)/Quad(1e35); }
+#endif
+
 } // namespace El
 
 #endif // ifndef EL_IMPORTS_LAPACK_HPP

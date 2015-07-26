@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -39,11 +39,11 @@ main( int argc, char* argv[] )
 
         BlockDistMatrix<Complex<double>> A(m,n,g,mb,nb);
         Fill( A, Complex<double>(1) );
-        Scale( double(commRank), A.Matrix() );
+        A.Matrix() *= double(commRank);
         if( print )
             Print( A, "A" );
         DistMatrix<Complex<double>> AElem( A );
-        Scale( 2., AElem );
+        AElem *= 2;
         if( print )
             Print( AElem, "A := 2 A" );
         A = AElem;

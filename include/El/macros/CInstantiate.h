@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -36,19 +36,19 @@ C_PROTO_INT(i,Int)
 #endif
 
 #ifndef EL_NO_REAL_PROTO
-# if !defined(EL_NO_FLOAT_PROTO) && !defined(EL_DISABLE_FLOAT)
+# if !defined(EL_NO_FLOAT_PROTO)
 C_PROTO_FLOAT
 # endif
-# if !defined(EL_NO_DOUBLE_PROTO) && !defined(EL_DISABLE_DOUBLE)
+# if !defined(EL_NO_DOUBLE_PROTO)
 C_PROTO_DOUBLE
 # endif
 #endif
 
-#if !defined(EL_NO_COMPLEX_PROTO) && !defined(EL_DISABLE_COMPLEX)
-# if !defined(EL_NO_COMPLEX_FLOAT_PROTO) && !defined(EL_DISABLE_FLOAT)
+#if !defined(EL_NO_COMPLEX_PROTO)
+# if !defined(EL_NO_COMPLEX_FLOAT_PROTO)
 C_PROTO_COMPLEX_FLOAT
 # endif
-# if !defined(EL_NO_COMPLEX_DOUBLE_PROTO) && !defined(EL_DISABLE_DOUBLE)
+# if !defined(EL_NO_COMPLEX_DOUBLE_PROTO)
 C_PROTO_COMPLEX_DOUBLE
 # endif
 #endif

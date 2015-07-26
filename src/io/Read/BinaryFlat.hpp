@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -15,9 +15,9 @@ namespace read {
 
 template<typename T>
 inline void
-BinaryFlat( Matrix<T>& A, Int height, Int width, const std::string filename )
+BinaryFlat( Matrix<T>& A, Int height, Int width, const string filename )
 {
-    DEBUG_ONLY(CallStackEntry cse("read::BinaryFlat"))
+    DEBUG_ONLY(CSE cse("read::BinaryFlat"))
     std::ifstream file( filename.c_str(), std::ios::binary );
     if( !file.is_open() )
         RuntimeError("Could not open ",filename);
@@ -39,9 +39,9 @@ BinaryFlat( Matrix<T>& A, Int height, Int width, const std::string filename )
 template<typename T>
 inline void
 BinaryFlat
-( AbstractDistMatrix<T>& A, Int height, Int width, const std::string filename )
+( AbstractDistMatrix<T>& A, Int height, Int width, const string filename )
 {
-    DEBUG_ONLY(CallStackEntry cse("read::BinaryFlat"))
+    DEBUG_ONLY(CSE cse("read::BinaryFlat"))
     std::ifstream file( filename.c_str(), std::ios::binary );
     if( !file.is_open() )
         RuntimeError("Could not open ",filename);
@@ -98,10 +98,9 @@ BinaryFlat
 template<typename T>
 inline void
 BinaryFlat
-( AbstractBlockDistMatrix<T>& A, Int height, Int width, 
-  const std::string filename )
+( AbstractBlockDistMatrix<T>& A, Int height, Int width, const string filename )
 {
-    DEBUG_ONLY(CallStackEntry cse("read::BinaryFlat"))
+    DEBUG_ONLY(CSE cse("read::BinaryFlat"))
     std::ifstream file( filename.c_str(), std::ios::binary );
     if( !file.is_open() )
         RuntimeError("Could not open ",filename);

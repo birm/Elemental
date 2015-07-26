@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -13,12 +13,12 @@ namespace El {
 template<typename T>
 void Hanowa( Matrix<T>& A, Int n, T mu )
 {
-    DEBUG_ONLY(CallStackEntry cse("Hanowa"))
+    DEBUG_ONLY(CSE cse("Hanowa"))
     if( n % 2 != 0 )
         LogicError("n must be an even integer");
     A.Resize( n, n );
     const Int m = n/2;
-    std::vector<T> d(m);
+    vector<T> d(m);
 
     for( Int j=0; j<m; ++j )
         d[j] = mu;
@@ -41,16 +41,17 @@ void Hanowa( Matrix<T>& A, Int n, T mu )
 template<typename T>
 void Hanowa( AbstractDistMatrix<T>& A, Int n, T mu )
 {
-    DEBUG_ONLY(CallStackEntry cse("Hanowa"))
+    DEBUG_ONLY(CSE cse("Hanowa"))
     if( n % 2 != 0 )
         LogicError("n must be an even integer");
     A.Resize( n, n );
     const Int m = n/2;
-    std::vector<T> d(m);
+    vector<T> d(m);
 
     for( Int j=0; j<m; ++j )
         d[j] = mu;
-    std::unique_ptr<AbstractDistMatrix<T>> ABlock( A.Construct(A.Grid()) );
+    unique_ptr<AbstractDistMatrix<T>> 
+      ABlock( A.Construct(A.Grid(),A.Root()) );
     View( *ABlock, A, IR(0,m), IR(0,m) );
     Diagonal( *ABlock, d );
     View( *ABlock, A, IR(m,2*m), IR(m,2*m) );
@@ -73,6 +74,7 @@ void Hanowa( AbstractDistMatrix<T>& A, Int n, T mu )
   template void Hanowa( Matrix<T>& A, Int n, T mu ); \
   template void Hanowa( AbstractDistMatrix<T>& A, Int n, T mu );
 
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

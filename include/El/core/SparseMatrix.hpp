@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson, Lexing Ying,
+   Copyright (c) 2009-2015, Jack Poulson, Lexing Ying,
    The University of Texas at Austin, Stanford University, and the
    Georgia Insitute of Technology.
    All rights reserved.
@@ -21,61 +21,111 @@ template<typename T>
 class SparseMatrix
 {
 public:
-    // Construction and destruction
+    // Constructors and destructors
+    // ============================
     SparseMatrix();
-    SparseMatrix( int height );
-    SparseMatrix( int height, int width );
+    SparseMatrix( Int height, Int width );
     SparseMatrix( const SparseMatrix<T>& A );
     // NOTE: This requires A to be distributed over a single process
     SparseMatrix( const DistSparseMatrix<T>& A );
+    // TODO: Move constructor
     ~SparseMatrix();
 
-    // High-level information
-    int Height() const;
-    int Width() const;
-    El::Graph& Graph();
-    const El::Graph& LockedGraph() const;
+    // Assignment and reconfiguration
+    // ==============================
 
-    // Assembly-related routines
-    void StartAssembly();
-    void StopAssembly();
-    void Reserve( int numEntries );
-    void Update( int row, int col, T value );
-    int Capacity() const;
+    // Change the size of the matrix
+    // -----------------------------
+    void Empty( bool clearMemory=true );
+    void Resize( Int height, Int width );
 
-    // Data
-    int Row( int index ) const;
-    int Col( int index ) const;
-    T Value( int index ) const;
-    int NumEntries() const;
-    int EntryOffset( int row ) const;
-    int NumConnections( int row ) const;
-    int* SourceBuffer();
-    int* TargetBuffer();
-    T* ValueBuffer();
-    const int* LockedSourceBuffer() const;
-    const int* LockedTargetBuffer() const;
-    const T* LockedValueBuffer() const;
+    // Assembly
+    // --------
+    void Reserve( Int numEntries );
 
-    // For modifying the size of the matrix
-    void Empty();
-    void Resize( int height, int width );
+    void FreezeSparsity();
+    void UnfreezeSparsity();
+    bool FrozenSparsity() const;
 
+    // Expensive independent updates and explicit zeroing
+    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    void Update( const Entry<T>& entry );
+    void Update( Int row, Int col, T value );
+    void Zero( Int row, Int col );
+
+    // Batch updating and zeroing (recommended)
+    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    void QueueUpdate( const Entry<T>& entry );
+    void QueueUpdate( Int row, Int col, T value );
+    void QueueZero( Int row, Int col );
+    void ProcessQueues();
+
+    // Operator overloading
+    // ====================
+
+    // Make a copy
+    // -----------
     // For copying one matrix to another
     const SparseMatrix<T>& operator=( const SparseMatrix<T>& A );
     // NOTE: This requires A to be distributed over a single process
     const SparseMatrix<T>& operator=( const DistSparseMatrix<T>& A );
+    // TODO: Move assignment
+
+    // Make a copy of a submatrix
+    // --------------------------
+    SparseMatrix<T> operator()( Range<Int> I, Range<Int> J ) const;
+
+    // Rescaling
+    // ---------
+    const SparseMatrix<T>& operator*=( T alpha );
+
+    // Addition/subtraction
+    // --------------------
+    const SparseMatrix<T>& operator+=( const SparseMatrix<T>& A );
+    const SparseMatrix<T>& operator-=( const SparseMatrix<T>& A );
+
+    // Queries
+    // =======
+
+    // High-level information
+    // ----------------------
+    Int Height() const;
+    Int Width() const;
+    Int NumEntries() const;
+    Int Capacity() const;
+    bool Consistent() const;
+    El::Graph& Graph();
+    const El::Graph& LockedGraph() const;
+
+    // Entrywise information
+    // ---------------------
+    Int Row( Int index ) const;
+    Int Col( Int index ) const;
+    T Value( Int index ) const;
+    Int RowOffset( Int row ) const;
+    Int Offset( Int row, Int col ) const;
+    Int NumConnections( Int row ) const;
+    Int* SourceBuffer();
+    Int* TargetBuffer();
+    Int* OffsetBuffer();
+    T* ValueBuffer();
+    const Int* LockedSourceBuffer() const;
+    const Int* LockedTargetBuffer() const;
+    const Int* LockedOffsetBuffer() const;
+    const T* LockedValueBuffer() const;
+
+    void AssertConsistent() const;
 
 private:
     El::Graph graph_;
-    std::vector<T> vals_;
+    vector<T> vals_;
 
     static bool CompareEntries( const Entry<T>& a, const Entry<T>& b );
 
-    void EnsureConsistentSizes() const;
-    void EnsureConsistentCapacities() const;
-
     template<typename U> friend class DistSparseMatrix;
+    template<typename U> 
+    friend void CopyFromRoot
+    ( const DistSparseMatrix<U>& ADist, SparseMatrix<U>& A );
 };
 
 } // namespace El

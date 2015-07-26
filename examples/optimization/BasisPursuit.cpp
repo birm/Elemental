@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -9,14 +9,7 @@
 #include "El.hpp"
 using namespace El;
 
-// This driver is an adaptation of the solver described at
-//    http://www.stanford.edu/~boyd/papers/admm/basis_pursuit/basis_pursuit.html
-// which is derived from the distributed ADMM article of Boyd et al.
-//
-// Basis pursuit seeks the solution to A x = b which minimizes || x ||_1
-
 typedef double Real;
-typedef Complex<Real> C;
 
 int 
 main( int argc, char* argv[] )
@@ -27,6 +20,8 @@ main( int argc, char* argv[] )
     {
         const Int m = Input("--m","height of matrix",100);
         const Int n = Input("--n","width of matrix",200);
+        const bool useIPM = Input("--useIPM","use Interior Point?",true);
+        // TODO: Add options for controlling IPM
         const Int maxIter = Input("--maxIter","maximum # of iter's",500);
         const Real rho = Input("--rho","augmented Lagrangian param.",1.);
         const Real alpha = Input("--alpha","over-relaxation",1.2);
@@ -40,9 +35,9 @@ main( int argc, char* argv[] )
         ProcessInput();
         PrintInputReport();
 
-        DistMatrix<C> A, b, xTrue;
+        DistMatrix<Real> A, b, xTrue;
         Uniform( A, m, n );
-        Uniform( b, n, 1 );
+        Uniform( b, m, 1 );
         if( print )
         {
             Print( A, "A" );
@@ -51,17 +46,27 @@ main( int argc, char* argv[] )
         if( display )
             Display( A, "A" );
 
-        DistMatrix<C> z;
-        BasisPursuit
-        ( A, b, z, rho, alpha, maxIter, absTol, relTol, usePinv, pinvTol,
-          progress );
+        const bool sparse = false;
+        BPCtrl<Real> ctrl(sparse);
+        ctrl.useIPM = useIPM;
+        ctrl.admmCtrl.rho = rho;
+        ctrl.admmCtrl.alpha = alpha;
+        ctrl.admmCtrl.maxIter = maxIter;
+        ctrl.admmCtrl.absTol = absTol;
+        ctrl.admmCtrl.relTol = relTol;
+        ctrl.admmCtrl.usePinv = usePinv;
+        ctrl.admmCtrl.pinvTol = pinvTol;
+        ctrl.admmCtrl.progress = progress;
+
+        DistMatrix<Real> x;
+        BP( A, b, x, ctrl );
         if( print )
-            Print( z, "z" );
-        const Int zZeroNorm = ZeroNorm( z );
+            Print( x, "x" );
+        const Int xZeroNorm = ZeroNorm( x );
         if( mpi::Rank(mpi::COMM_WORLD) == 0 )
-            std::cout << "|| z     ||_0 = " << zZeroNorm << "\n" << std::endl;
+            cout << "|| x ||_0 = " << xZeroNorm << "\n" << endl;
     }
-    catch( std::exception& e ) { ReportException(e); }
+    catch( exception& e ) { ReportException(e); }
 
     Finalize();
     return 0;

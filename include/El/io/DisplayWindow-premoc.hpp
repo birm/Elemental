@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -22,10 +22,7 @@
 # include "El/FCMangle.h"
 #endif
 #include "El/core.hpp"
-#include "El/blas-like.hpp"
 #include "El/io.hpp"
-#include "El/lapack-like.hpp"
-#include "El/optimization.hpp"
 
 namespace El {
 

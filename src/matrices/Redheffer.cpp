@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -13,37 +13,37 @@ namespace El {
 template<typename T> 
 void Redheffer( Matrix<T>& R, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Redheffer"))
+    DEBUG_ONLY(CSE cse("Redheffer"))
     R.Resize( n, n );
     auto redhefferFill = 
-      []( Int i, Int j )
+      []( Int i, Int j ) -> T
       { if( j == 0 || ((j+1)%(i+1))==0 ) { return T(1); }
         else                             { return T(0); } };
-    IndexDependentFill( R, std::function<T(Int,Int)>(redhefferFill) );
+    IndexDependentFill( R, function<T(Int,Int)>(redhefferFill) );
 }
 
 template<typename T>
 void Redheffer( AbstractDistMatrix<T>& R, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Redheffer"))
+    DEBUG_ONLY(CSE cse("Redheffer"))
     R.Resize( n, n );
     auto redhefferFill = 
-      []( Int i, Int j )
+      []( Int i, Int j ) -> T
       { if( j == 0 || ((j+1)%(i+1))==0 ) { return T(1); }
         else                             { return T(0); } };
-    IndexDependentFill( R, std::function<T(Int,Int)>(redhefferFill) );
+    IndexDependentFill( R, function<T(Int,Int)>(redhefferFill) );
 }
 
 template<typename T>
 void Redheffer( AbstractBlockDistMatrix<T>& R, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Redheffer"))
+    DEBUG_ONLY(CSE cse("Redheffer"))
     R.Resize( n, n );
     auto redhefferFill = 
-      []( Int i, Int j )
+      []( Int i, Int j ) -> T
       { if( j == 0 || ((j+1)%(i+1))==0 ) { return T(1); }
         else                             { return T(0); } };
-    IndexDependentFill( R, std::function<T(Int,Int)>(redhefferFill) );
+    IndexDependentFill( R, function<T(Int,Int)>(redhefferFill) );
 }
 
 #define PROTO(T) \
@@ -51,6 +51,7 @@ void Redheffer( AbstractBlockDistMatrix<T>& R, Int n )
   template void Redheffer( AbstractDistMatrix<T>& R, Int n ); \
   template void Redheffer( AbstractBlockDistMatrix<T>& R, Int n );
 
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

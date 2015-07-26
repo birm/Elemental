@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -19,55 +19,55 @@ namespace El {
 template<typename Real> 
 void Whale( Matrix<Complex<Real>>& A, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Whale"))
+    DEBUG_ONLY(CSE cse("Whale"))
     if( n < 5 )
         LogicError("Must be at least 5x5 to have a fourth-order symbol");
     typedef Complex<Real> C;
     Zeros( A, n, n );
-    SetDiagonal( A, -1,        4 );
-    SetDiagonal( A, C(-3,-2),  3 );
-    SetDiagonal( A, C( 0, 1),  2 );
-    SetDiagonal( A,  1,        1 );
-    SetDiagonal( A, 10,       -1 );
-    SetDiagonal( A, C( 3, 1), -2 );
-    SetDiagonal( A,  4,       -3 );
-    SetDiagonal( A, C( 0, 1), -4 );
+    FillDiagonal( A, C(-1),     4 );
+    FillDiagonal( A, C(-3,-2),  3 );
+    FillDiagonal( A, C( 0, 1),  2 );
+    FillDiagonal( A, C(1),      1 );
+    FillDiagonal( A, C(10),    -1 );
+    FillDiagonal( A, C( 3, 1), -2 );
+    FillDiagonal( A, C(4),     -3 );
+    FillDiagonal( A, C( 0, 1), -4 );
 }
 
 template<typename Real>
 void Whale( AbstractDistMatrix<Complex<Real>>& A, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Whale"))
+    DEBUG_ONLY(CSE cse("Whale"))
     if( n < 5 )
         LogicError("Must be at least 5x5 to have a fourth-order symbol");
     typedef Complex<Real> C;
     Zeros( A, n, n );
-    SetDiagonal( A, -1,        4 );
-    SetDiagonal( A, C(-3,-2),  3 );
-    SetDiagonal( A, C( 0, 1),  2 );
-    SetDiagonal( A,  1,        1 );
-    SetDiagonal( A, 10,       -1 );
-    SetDiagonal( A, C( 3, 1), -2 );
-    SetDiagonal( A,  4,       -3 );
-    SetDiagonal( A, C( 0, 1), -4 );
+    FillDiagonal( A, C(-1),     4 );
+    FillDiagonal( A, C(-3,-2),  3 );
+    FillDiagonal( A, C( 0, 1),  2 );
+    FillDiagonal( A, C(1),      1 );
+    FillDiagonal( A, C(10),    -1 );
+    FillDiagonal( A, C( 3, 1), -2 );
+    FillDiagonal( A, C(4),     -3 );
+    FillDiagonal( A, C( 0, 1), -4 );
 }
 
 template<typename Real>
 void Whale( AbstractBlockDistMatrix<Complex<Real>>& A, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Whale"))
+    DEBUG_ONLY(CSE cse("Whale"))
     if( n < 5 )
         LogicError("Must be at least 5x5 to have a fourth-order symbol");
     typedef Complex<Real> C;
     Zeros( A, n, n );
-    SetDiagonal( A, -1,        4 );
-    SetDiagonal( A, C(-3,-2),  3 );
-    SetDiagonal( A, C( 0, 1),  2 );
-    SetDiagonal( A,  1,        1 );
-    SetDiagonal( A, 10,       -1 );
-    SetDiagonal( A, C( 3, 1), -2 );
-    SetDiagonal( A,  4,       -3 );
-    SetDiagonal( A, C( 0, 1), -4 );
+    FillDiagonal( A, C(-1),     4 );
+    FillDiagonal( A, C(-3,-2),  3 );
+    FillDiagonal( A, C( 0, 1),  2 );
+    FillDiagonal( A, C(1),      1 );
+    FillDiagonal( A, C(10),    -1 );
+    FillDiagonal( A, C( 3, 1), -2 );
+    FillDiagonal( A, C(4),     -3 );
+    FillDiagonal( A, C( 0, 1), -4 );
 }
 
 #define PROTO(Real) \
@@ -77,6 +77,7 @@ void Whale( AbstractBlockDistMatrix<Complex<Real>>& A, Int n )
 
 #define EL_NO_INT_PROTO
 #define EL_NO_COMPLEX_PROTO
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

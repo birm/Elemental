@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -38,7 +38,7 @@ main( int argc, char* argv[] )
         Gaussian( w, n, 1 );
         {
             const Real wNorm = FrobeniusNorm( w );
-            Scale( Real(1)/wNorm, w );
+            w *= 1/wNorm;
         }
         Real offset = SampleNormal();
         mpi::Broadcast( offset, 0, mpi::COMM_WORLD );
@@ -60,10 +60,10 @@ main( int argc, char* argv[] )
         Gemv( NORMAL, Real(1), G, w, -offset, q );
         auto sgnMap = []( Real alpha ) 
                       { return alpha >= 0 ? Real(1) : Real(-1); }; 
-        EntrywiseMap( q, std::function<Real(Real)>(sgnMap) );
+        EntrywiseMap( q, function<Real(Real)>(sgnMap) );
 
         if( mpi::WorldRank() == 0 )
-            std::cout << "offset=" << offset << std::endl;
+            cout << "offset=" << offset << endl;
         if( print )
         {
             Print( w, "w" );
@@ -73,20 +73,25 @@ main( int argc, char* argv[] )
         if( display )
             Display( G, "G" );
 
+        ModelFitCtrl<Real> ctrl;
+        ctrl.rho = rho;
+        ctrl.maxIter = maxIter;
+        ctrl.inv = inv;
+        ctrl.progress = progress;
+
         DistMatrix<Real> wHatLog;
-        LogisticRegression
-        ( G, q, wHatLog, gamma, penalty, rho, maxIter, inv, progress );
+        LogisticRegression( G, q, wHatLog, gamma, penalty );
         auto wLog = View( wHatLog, 0, 0, n, 1 );
         const Real offsetLog = -wHatLog.Get(n,0);
         const Real wLogOneNorm = OneNorm( wLog );
         const Real wLogFrobNorm = FrobeniusNorm( wLog );
         if( mpi::WorldRank() == 0 )
-            std::cout << "|| wLog ||_1=" << wLogOneNorm << "\n"
-                      << "|| wLog ||_2=" << wLogFrobNorm << "\n"
-                      << "margin      =" << Real(2)/wLogFrobNorm << "\n"
-                      << "offsetLog=" << offsetLog << "\n"
-                      << "offsetLog / || wLog ||_2=" << offsetLog/wLogFrobNorm 
-                      << std::endl;
+            cout << "|| wLog ||_1=" << wLogOneNorm << "\n"
+                 << "|| wLog ||_2=" << wLogFrobNorm << "\n"
+                 << "margin      =" << Real(2)/wLogFrobNorm << "\n"
+                 << "offsetLog=" << offsetLog << "\n"
+                 << "offsetLog / || wLog ||_2=" << offsetLog/wLogFrobNorm 
+                 << endl;
         if( print )
             Print( wLog, "wLog" );
 
@@ -95,16 +100,15 @@ main( int argc, char* argv[] )
         DistMatrix<Real> qLog;
         Ones( qLog, m, 1 );
         Gemv( NORMAL, Real(1), G, wLog, -offsetLog, qLog );
-        EntrywiseMap( qLog, std::function<Real(Real)>(sgnMap) );
+        EntrywiseMap( qLog, function<Real(Real)>(sgnMap) );
         if( print )
             Print( qLog, "qLog" );
-        Axpy( Real(-1), q, qLog );
+        qLog -= q;
         const Real numWrong = OneNorm(qLog) / Real(2);
         if( mpi::WorldRank() == 0 )
-            std::cout << "ratio misclassified: " << numWrong << "/" << m 
-                      << std::endl;
+            cout << "ratio misclassified: " << numWrong << "/" << m << endl;
     }
-    catch( std::exception& e ) { ReportException(e); }
+    catch( exception& e ) { ReportException(e); }
 
     Finalize();
     return 0;

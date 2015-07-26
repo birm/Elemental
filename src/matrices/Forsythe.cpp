@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -13,7 +13,7 @@ namespace El {
 template<typename T>
 void Forsythe( Matrix<T>& J, Int n, T alpha, T lambda )
 {
-    DEBUG_ONLY(CallStackEntry cse("Forsythe"))
+    DEBUG_ONLY(CSE cse("Forsythe"))
     Jordan( J, n, lambda );
     if( n > 0 )
         J.Set( n-1, 0, alpha );
@@ -22,7 +22,7 @@ void Forsythe( Matrix<T>& J, Int n, T alpha, T lambda )
 template<typename T>
 void Forsythe( AbstractDistMatrix<T>& J, Int n, T alpha, T lambda )
 {
-    DEBUG_ONLY(CallStackEntry cse("Forsythe"))
+    DEBUG_ONLY(CSE cse("Forsythe"))
     Jordan( J, n, lambda );
     if( n > 0 )
         J.Set( n-1, 0, alpha );
@@ -31,7 +31,7 @@ void Forsythe( AbstractDistMatrix<T>& J, Int n, T alpha, T lambda )
 template<typename T>
 void Forsythe( AbstractBlockDistMatrix<T>& J, Int n, T alpha, T lambda )
 {
-    DEBUG_ONLY(CallStackEntry cse("Forsythe"))
+    DEBUG_ONLY(CSE cse("Forsythe"))
     Jordan( J, n, lambda );
     if( n > 0 )
         J.Set( n-1, 0, alpha );
@@ -44,6 +44,7 @@ void Forsythe( AbstractBlockDistMatrix<T>& J, Int n, T alpha, T lambda )
   template void Forsythe \
   ( AbstractBlockDistMatrix<T>& J, Int n, T alpha, T lambda );
 
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson, Lexing Ying,
+   Copyright (c) 2009-2015, Jack Poulson, Lexing Ying,
    The University of Texas at Austin, Stanford University, and the
    Georgia Insitute of Technology.
    All rights reserved.
@@ -12,23 +12,31 @@
 
 namespace El {
 
-Graph::Graph()
-: numSources_(0), numTargets_(0), assembling_(false), sorted_(true)
-{ }
+// Constructors and destructors
+// ============================
 
-Graph::Graph( int numVertices )
-: numSources_(numVertices), numTargets_(numVertices), 
-  assembling_(false), sorted_(true)
-{ }
+Graph::Graph() : numSources_(0), numTargets_(0), consistent_(true) { }
 
-Graph::Graph( int numSources, int numTargets )
-: numSources_(numSources), numTargets_(numTargets),
-  assembling_(false), sorted_(true)
-{ }
+Graph::Graph( Int numVertices )
+: numSources_(numVertices), numTargets_(numVertices), consistent_(true)
+{ 
+    sourceOffsets_.resize( numSources_+1 );
+    for( Int e=0; e<=numSources_; ++e )
+        sourceOffsets_[e] = 0;
+}
+
+Graph::Graph( Int numSources, Int numTargets )
+: numSources_(numSources), numTargets_(numTargets), consistent_(true)
+{ 
+    sourceOffsets_.resize( numSources_+1 );
+    for( Int e=0; e<=numSources_; ++e )
+        sourceOffsets_[e] = 0;
+}
 
 Graph::Graph( const Graph& graph )
+: numSources_(-1), numTargets_(-1)
 {
-    DEBUG_ONLY(CallStackEntry cse("Graph::Graph"))
+    DEBUG_ONLY(CSE cse("Graph::Graph"))
     if( &graph != this )
         *this = graph;
     else
@@ -36,266 +44,312 @@ Graph::Graph( const Graph& graph )
 }
     
 Graph::Graph( const DistGraph& graph )
+: numSources_(-1), numTargets_(-1)
 {
-    DEBUG_ONLY(CallStackEntry cse("Graph::Graph"))
+    DEBUG_ONLY(CSE cse("Graph::Graph"))
     *this = graph;
 }
 
 Graph::~Graph() { }
 
-int Graph::NumSources() const { return numSources_; }
-int Graph::NumTargets() const { return numTargets_; }
+// Assignment and reconfiguration
+// ==============================
 
-int Graph::NumEdges() const
-{
-    DEBUG_ONLY(
-        CallStackEntry cse("Graph::NumEdges");
-        EnsureConsistentSizes();
-    )
-    return sources_.size();
-}
-
-int Graph::Capacity() const
-{
-    DEBUG_ONLY(
-        CallStackEntry cse("Graph::Capacity");
-        EnsureConsistentSizes();
-        EnsureConsistentCapacities();
-    )
-    return sources_.capacity();
-}
-
-int Graph::Source( int edge ) const
-{
-    DEBUG_ONLY(
-        CallStackEntry cse("Graph::Source");
-        if( edge < 0 || edge >= (int)sources_.size() )
-            LogicError("Edge number out of bounds");
-    )
-    EnsureNotAssembling();
-    return sources_[edge];
-}
-
-int Graph::Target( int edge ) const
-{
-    DEBUG_ONLY(
-        CallStackEntry cse("Graph::Target");
-        if( edge < 0 || edge >= (int)targets_.size() )
-            LogicError("Edge number out of bounds");
-    )
-    EnsureNotAssembling();
-    return targets_[edge];
-}
-
-int Graph::EdgeOffset( int source ) const
-{
-    DEBUG_ONLY(
-        CallStackEntry cse("Graph::EdgeOffset");
-        if( source < 0 )
-            LogicError("Negative source index");
-        if( source > numSources_ )
-            LogicError
-            ("Source index was too large: ",source," is not in [0,",
-             numSources_,"]");
-    )
-    EnsureNotAssembling();
-    return edgeOffsets_[source];
-}
-
-int Graph::NumConnections( int source ) const
-{
-    DEBUG_ONLY(CallStackEntry cse("Graph::NumConnections"))
-    return EdgeOffset(source+1) - EdgeOffset(source);
-}
-
-int* Graph::SourceBuffer() { return &sources_[0]; }
-int* Graph::TargetBuffer() { return &targets_[0]; }
-
-const int* Graph::LockedSourceBuffer() const { return &sources_[0]; }
-const int* Graph::LockedTargetBuffer() const { return &targets_[0]; }
-
+// Making a copy
+// -------------
 const Graph& Graph::operator=( const Graph& graph )
 {
-    DEBUG_ONLY(CallStackEntry cse("Graph::operator="))
-    numSources_ = graph.numSources_;
-    numTargets_ = graph.numTargets_;
-    sources_ = graph.sources_; 
-    targets_ = graph.targets_;
-
-    sorted_ = graph.sorted_;
-    assembling_ = graph.assembling_;
-    edgeOffsets_ = graph.edgeOffsets_;
+    DEBUG_ONLY(CSE cse("Graph::operator="))
+    Copy( graph, *this );
     return *this;
 }
 
 const Graph& Graph::operator=( const DistGraph& graph )
 {
-    DEBUG_ONLY(CallStackEntry cse("Graph::operator="))
-    mpi::Comm comm = graph.Comm();
-    const int commSize = mpi::Size( comm );
-    if( commSize != 1 )
-        LogicError
-        ("Cannot yet construct sequential graph from distributed graph");
-
-    numSources_ = graph.numSources_;
-    numTargets_ = graph.numTargets_;
-    sources_ = graph.sources_; 
-    targets_ = graph.targets_;
-
-    sorted_ = graph.sorted_;
-    assembling_ = graph.assembling_;
-    edgeOffsets_ = graph.localEdgeOffsets_;
+    DEBUG_ONLY(CSE cse("Graph::operator="))
+    Copy( graph, *this );
     return *this;
 }
 
-bool Graph::ComparePairs
-( const std::pair<int,int>& a, const std::pair<int,int>& b )
-{ return a.first < b.first || (a.first  == b.first && a.second < b.second); }
-
-void Graph::StartAssembly()
+// Make a copy of a contiguous subgraph
+// ------------------------------------
+Graph Graph::operator()( Range<Int> I, Range<Int> J ) const
 {
-    DEBUG_ONLY(CallStackEntry cse("Graph::StartAssembly"))
-    EnsureNotAssembling();
-    assembling_ = true;
+    DEBUG_ONLY(CSE cse("Graph::operator()"))
+    return GetSubgraph( *this, I, J );
 }
 
-void Graph::StopAssembly()
+// Changing the graph size
+// -----------------------
+void Graph::Empty( bool clearMemory )
 {
-    DEBUG_ONLY(CallStackEntry cse("Graph::StopAssembly"))
-    if( !assembling_ )
-        LogicError("Cannot stop assembly without starting");
-    assembling_ = false;
-
-    // Ensure that the connection pairs are sorted
-    if( !sorted_ )
+    numSources_ = 0;
+    numTargets_ = 0;
+    consistent_ = true;
+    if( clearMemory )
     {
-        const int numEdges = sources_.size();
-        std::vector<std::pair<int,int>> pairs( numEdges );
-        for( int e=0; e<numEdges; ++e )
-        {
-            pairs[e].first = sources_[e];
-            pairs[e].second = targets_[e];
-        }
-        std::sort( pairs.begin(), pairs.end(), ComparePairs );
-
-        // Compress out duplicates
-        int lastUnique=0;
-        for( int e=1; e<numEdges; ++e )
-            if( pairs[e] != pairs[lastUnique] )
-                pairs[++lastUnique] = pairs[e];
-        const int numUnique = lastUnique+1;
-
-        sources_.resize( numUnique );
-        targets_.resize( numUnique );
-        for( int e=0; e<numUnique; ++e )
-        {
-            sources_[e] = pairs[e].first;
-            targets_[e] = pairs[e].second;
-        }
+        SwapClear( sources_ );
+        SwapClear( targets_ );
+        SwapClear( sourceOffsets_ );
     }
-
-    ComputeEdgeOffsets();
-}
-
-void Graph::ComputeEdgeOffsets()
-{
-    DEBUG_ONLY(CallStackEntry cse("Graph::ComputeEdgeOffsets"))
-    // Compute the edge offsets
-    int sourceOffset = 0;
-    int prevSource = -1;
-    edgeOffsets_.resize( numSources_+1 );
-    const int numEdges = NumEdges();
-    for( int edge=0; edge<numEdges; ++edge )
+    else
     {
-        const int source = Source( edge );
-        DEBUG_ONLY(
-            if( source < prevSource )
-                RuntimeError("sources were not properly sorted");
-        )
-        while( source != prevSource )
-        {
-            edgeOffsets_[sourceOffset++] = edge;
-            ++prevSource;
-        }
+        sources_.resize( 0 );
+        targets_.resize( 0 );
     }
-    edgeOffsets_[numSources_] = numEdges;
+    sourceOffsets_.resize( 1 );
+    sourceOffsets_[0] = 0;
 }
 
-void Graph::Reserve( int numEdges )
+void Graph::Resize( Int numVertices )
+{ Resize( numVertices, numVertices ); }
+
+void Graph::Resize( Int numSources, Int numTargets )
+{
+    DEBUG_ONLY(CSE cse("Graph::Resize"))
+    if( numSources_ == numSources && numTargets_ == numTargets )
+        return;
+
+    numSources_ = numSources;
+    numTargets_ = numTargets;
+    sources_.resize( 0 );
+    targets_.resize( 0 );
+    sourceOffsets_.resize( numSources+1 );
+    for( Int e=0; e<=numSources; ++e )
+        sourceOffsets_[e] = 0;
+    consistent_ = true;
+}
+
+// Assembly
+// --------
+void Graph::Reserve( Int numEdges )
 { 
     sources_.reserve( numEdges );
     targets_.reserve( numEdges );
 }
 
-void Graph::Insert( int source, int target )
+void Graph::Connect( Int source, Int target )
+{
+    DEBUG_ONLY(CSE cse("Graph::Connect"))
+    QueueConnection( source, target );
+    ProcessQueues();
+}
+
+void Graph::Disconnect( Int source, Int target )
+{
+    DEBUG_ONLY(CSE cse("Graph::Disconnect"))
+    QueueDisconnection( source, target );
+    ProcessQueues();
+}
+
+void Graph::FreezeSparsity() { frozenSparsity_ = true; }
+void Graph::UnfreezeSparsity() { frozenSparsity_ = false; }
+bool Graph::FrozenSparsity() const { return frozenSparsity_; }
+
+void Graph::QueueConnection( Int source, Int target )
+{
+    DEBUG_ONLY(CSE cse("Graph::QueueConnection"))
+    DEBUG_ONLY(
+      if( NumEdges() == Capacity() )
+          cerr << "WARNING: Pushing back without first reserving space" << endl;
+    )
+    if( source == END ) source = numSources_ - 1;
+    if( target == END ) target = numTargets_ - 1;
+    if( source < 0 || source >= numSources_ )
+        LogicError
+        ("Source was out of bounds: ",source," is not in [0,",numSources_,")");
+    if( target < 0 || target >= numTargets_ )
+        LogicError
+        ("Target was out of bounds: ",target," is not in [0,",numTargets_,")");
+    if( !FrozenSparsity() )
+    {
+        sources_.push_back( source );
+        targets_.push_back( target );
+        consistent_ = false;
+    }
+}
+
+void Graph::QueueDisconnection( Int source, Int target )
+{
+    DEBUG_ONLY(CSE cse("Graph::QueueDisconnection"))
+    if( source == END ) source = numSources_ - 1;
+    if( target == END ) target = numTargets_ - 1;
+    if( !FrozenSparsity() )
+    {
+        markedForRemoval_.insert( pair<Int,Int>(source,target) );
+        consistent_ = false;
+    }
+}
+
+void Graph::ProcessQueues()
 {
     DEBUG_ONLY(
-        CallStackEntry cse("Graph::Insert");
-        EnsureConsistentSizes();
-        const int capacity = Capacity();
-        const int numEdges = NumEdges();
-        if( source < 0 || source >= numSources_ )
-            LogicError
-            ("Source was out of bounds: ",source," is not in [0,",
-             numSources_,")");
-        if( numEdges == capacity )
-            std::cerr << "WARNING: Pushing back without first reserving space" 
-                      << std::endl;
+      CSE cse("Graph::ProcessQueues");
+      if( sources_.size() != targets_.size() )
+          LogicError("Inconsistent graph buffer sizes");
     )
-    if( !assembling_ )
-        LogicError("Must start assembly before pushing back");
-    if( sorted_ && sources_.size() != 0 )
+    if( consistent_ )
+        return;
+
+    Int numRemoved=0;
+    const Int numEdges = sources_.size();
+    vector<pair<Int,Int>> pairs( numEdges );
+    if( markedForRemoval_.size() != 0 )
     {
-        if( source < sources_.back() )
-            sorted_ = false;
-        if( source == sources_.back() && target < targets_.back() )
-            sorted_ = false;
+        for( Int e=0; e<numEdges; ++e )
+        {
+            pair<Int,Int> candidate(sources_[e],targets_[e]);
+            if( markedForRemoval_.find(candidate) == markedForRemoval_.end() )
+                pairs[e-numRemoved] = candidate;
+            else
+                ++numRemoved;
+        }
+        markedForRemoval_.clear();
+        pairs.resize( numEdges-numRemoved );
     }
-    sources_.push_back( source );
-    targets_.push_back( target );
+    else
+    {
+        for( Int e=0; e<numEdges; ++e )
+            pairs[e] = pair<Int,Int>{sources_[e],targets_[e]};
+    }
+    std::sort( pairs.begin(), pairs.end() );
+    const Int numSorted = pairs.size();
+
+    // Compress out duplicates
+    Int lastUnique=0;
+    for( Int e=1; e<numSorted; ++e )
+        if( pairs[e] != pairs[lastUnique] )
+            pairs[++lastUnique] = pairs[e];
+    const Int numUnique = lastUnique+1;
+    pairs.resize( numUnique );
+
+    sources_.resize( numUnique );
+    targets_.resize( numUnique );
+    for( Int e=0; e<numUnique; ++e )
+    {
+        sources_[e] = pairs[e].first;
+        targets_[e] = pairs[e].second;
+    }
+
+    ComputeSourceOffsets();
+    consistent_ = true;
 }
 
-void Graph::Empty()
+// Queries
+// =======
+
+Int Graph::NumSources() const { return numSources_; }
+Int Graph::NumTargets() const { return numTargets_; }
+
+Int Graph::NumEdges() const
 {
-    numSources_ = 0;
-    numTargets_ = 0;
-    SwapClear( sources_ );
-    SwapClear( targets_ );
-    sorted_ = true;
-    assembling_ = false;
-    SwapClear( edgeOffsets_ );
+    DEBUG_ONLY(CSE cse("Graph::NumEdges"))
+    return sources_.size();
 }
 
-void Graph::Resize( int numVertices )
-{ Resize( numVertices, numVertices ); }
-
-void Graph::Resize( int numSources, int numTargets )
+Int Graph::Capacity() const
 {
-    numSources_ = numSources;
-    numTargets_ = numTargets;
-    SwapClear( sources_ );
-    SwapClear( targets_ );
-    sorted_ = true;
-    assembling_ = false;
-    SwapClear( edgeOffsets_ );
+    DEBUG_ONLY(CSE cse("Graph::Capacity"))
+    return Min(sources_.capacity(),targets_.capacity());
 }
 
-void Graph::EnsureNotAssembling() const
+bool Graph::Consistent() const { return consistent_; }
+
+Int Graph::Source( Int edge ) const
 {
-    if( assembling_ )
-        LogicError("Should have finished assembling first");
+    DEBUG_ONLY(
+      CSE cse("Graph::Source");
+      if( edge < 0 || edge >= (Int)sources_.size() )
+          LogicError("Edge number out of bounds");
+    )
+    return sources_[edge];
 }
 
-void Graph::EnsureConsistentSizes() const
+Int Graph::Target( Int edge ) const
+{
+    DEBUG_ONLY(
+      CSE cse("Graph::Target");
+      if( edge < 0 || edge >= (Int)targets_.size() )
+          LogicError("Edge number out of bounds");
+    )
+    return targets_[edge];
+}
+
+Int Graph::SourceOffset( Int source ) const
+{
+    if( source == END ) source = numSources_ - 1;
+    DEBUG_ONLY(
+      CSE cse("Graph::SourceOffset");
+      if( source < 0 )
+          LogicError("Negative source index");
+      if( source > numSources_ )
+          LogicError
+          ("Source index was too large: ",source," is not in [0,",
+           numSources_,"]");
+      AssertConsistent();
+    )
+    return sourceOffsets_[source];
+}
+
+Int Graph::Offset( Int source, Int target ) const
+{
+    DEBUG_ONLY(CSE cse("Graph::Offset"))
+    if( source == END ) source = numSources_ - 1;
+    if( target == END ) target = numTargets_ - 1; 
+    const Int* targetBuf = LockedTargetBuffer();
+    const Int thisOff = SourceOffset(source);
+    const Int nextOff = SourceOffset(source+1);
+    auto it = std::lower_bound( targetBuf+thisOff, targetBuf+nextOff, target );
+    return it-targetBuf;
+}
+
+Int Graph::NumConnections( Int source ) const
+{
+    if( source == END ) source = numSources_ - 1;
+    DEBUG_ONLY(
+      CSE cse("Graph::NumConnections");
+      AssertConsistent();
+    )
+    return SourceOffset(source+1) - SourceOffset(source);
+}
+
+Int* Graph::SourceBuffer() { return sources_.data(); }
+Int* Graph::TargetBuffer() { return targets_.data(); }
+Int* Graph::OffsetBuffer() { return sourceOffsets_.data(); }
+
+const Int* Graph::LockedSourceBuffer() const { return sources_.data(); }
+const Int* Graph::LockedTargetBuffer() const { return targets_.data(); }
+const Int* Graph::LockedOffsetBuffer() const { return sourceOffsets_.data(); }
+
+// Auxiliary functions
+// ===================
+
+void Graph::ComputeSourceOffsets()
+{
+    DEBUG_ONLY(CSE cse("Graph::ComputeSourceOffsets"))
+    Int sourceOffset = 0;
+    Int prevSource = -1;
+    sourceOffsets_.resize( numSources_+1 );
+    const Int numEdges = NumEdges();
+    const Int* sourceBuf = LockedSourceBuffer();
+    for( Int e=0; e<numEdges; ++e )
+    {
+        const Int source = sourceBuf[e];
+        DEBUG_ONLY(
+          if( source < prevSource )
+              RuntimeError("sources were not properly sorted");
+        )
+        for( ; prevSource<source; ++prevSource )
+            sourceOffsets_[sourceOffset++] = e;
+    }
+    for( ; sourceOffset<=numSources_; ++sourceOffset )
+        sourceOffsets_[sourceOffset] = numEdges;
+}
+
+void Graph::AssertConsistent() const
 { 
-    if( sources_.size() != targets_.size() )
-        LogicError("Inconsistent graph sizes");
-}
-
-void Graph::EnsureConsistentCapacities() const
-{ 
-    if( sources_.capacity() != targets_.capacity() )
-        LogicError("Inconsistent graph capacities");
+    if( !consistent_ )
+        LogicError("Graph was not consistent; run ProcessQueues()");
 }
 
 } // namespace El

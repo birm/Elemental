@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -13,7 +13,7 @@ namespace El {
 template<typename T> 
 void Walsh( Matrix<T>& A, Int k, bool binary )
 {
-    DEBUG_ONLY(CallStackEntry cse("Walsh"))
+    DEBUG_ONLY(CSE cse("Walsh"))
     if( k < 1 )
         LogicError("Walsh matrices are only defined for k>=1");
     const Unsigned n = 1u<<k;
@@ -24,7 +24,7 @@ void Walsh( Matrix<T>& A, Int k, bool binary )
     const T onValue = 1;
     const T offValue = ( binary ? 0 : -1 );
     auto walshFill = 
-      [&]( Int i, Int j )
+      [&]( Int i, Int j ) -> T
       {
         // Recurse on the quadtree, flipping the sign of the entry each
         // time we are in the bottom-right quadrant
@@ -42,13 +42,13 @@ void Walsh( Matrix<T>& A, Int k, bool binary )
         }
         return ( on ? onValue : offValue );
       };
-    IndexDependentFill( A, std::function<T(Int,Int)>(walshFill) );
+    IndexDependentFill( A, function<T(Int,Int)>(walshFill) );
 }
 
 template<typename T>
 void Walsh( AbstractDistMatrix<T>& A, Int k, bool binary )
 {
-    DEBUG_ONLY(CallStackEntry cse("Walsh"))
+    DEBUG_ONLY(CSE cse("Walsh"))
     if( k < 1 )
         LogicError("Walsh matrices are only defined for k>=1");
     const Unsigned n = 1u<<k;
@@ -59,7 +59,7 @@ void Walsh( AbstractDistMatrix<T>& A, Int k, bool binary )
     const T onValue = 1;
     const T offValue = ( binary ? 0 : -1 );
     auto walshFill = 
-      [&]( Int i, Int j )
+      [&]( Int i, Int j ) -> T
       {
         // Recurse on the quadtree, flipping the sign of the entry each
         // time we are in the bottom-right quadrant
@@ -77,13 +77,14 @@ void Walsh( AbstractDistMatrix<T>& A, Int k, bool binary )
         }
         return ( on ? onValue : offValue );
       };
-    IndexDependentFill( A, std::function<T(Int,Int)>(walshFill) );
+    IndexDependentFill( A, function<T(Int,Int)>(walshFill) );
 }
 
 #define PROTO(T) \
   template void Walsh( Matrix<T>& A, Int k, bool binary ); \
   template void Walsh( AbstractDistMatrix<T>& A, Int k, bool binary );
 
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

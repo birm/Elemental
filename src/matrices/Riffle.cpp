@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -19,7 +19,7 @@ namespace El {
 template<typename F>
 void Riffle( Matrix<F>& P, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Riffle"))
+    DEBUG_ONLY(CSE cse("Riffle"))
     typedef Base<F> Real;
 
     auto logBinom = LogBinomial<Real>( n+1 );
@@ -29,20 +29,20 @@ void Riffle( Matrix<F>& P, Int n )
 
     P.Resize( n, n );
     auto riffleFill = 
-      [&]( Int i, Int j )
+      [&]( Int i, Int j ) -> F
       { const Int k = 2*i - j + 1;
         if( k >= 0 && k <= n+1 )
             return Exp(logBinom[k]-gamma+logEuler[j]-logEuler[i]);
         else
             return Base<F>(0); 
       };
-    IndexDependentFill( P, std::function<F(Int,Int)>(riffleFill) );
+    IndexDependentFill( P, function<F(Int,Int)>(riffleFill) );
 }
 
 template<typename F>
 void Riffle( AbstractDistMatrix<F>& P, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Riffle"))
+    DEBUG_ONLY(CSE cse("Riffle"))
     typedef Base<F> Real;
 
     auto logBinom = LogBinomial<Real>( n+1 );
@@ -52,20 +52,20 @@ void Riffle( AbstractDistMatrix<F>& P, Int n )
 
     P.Resize( n, n );
     auto riffleFill = 
-      [&]( Int i, Int j )
+      [&]( Int i, Int j ) -> F
       { const Int k = 2*i - j + 1;
         if( k >= 0 && k <= n+1 )
             return Exp(logBinom[k]-gamma+logEuler[j]-logEuler[i]);
         else
             return Base<F>(0); 
       };
-    IndexDependentFill( P, std::function<F(Int,Int)>(riffleFill) );
+    IndexDependentFill( P, function<F(Int,Int)>(riffleFill) );
 }
 
 template<typename F>
 void Riffle( AbstractBlockDistMatrix<F>& P, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Riffle"))
+    DEBUG_ONLY(CSE cse("Riffle"))
     typedef Base<F> Real;
 
     auto logBinom = LogBinomial<Real>( n+1 );
@@ -75,23 +75,23 @@ void Riffle( AbstractBlockDistMatrix<F>& P, Int n )
 
     P.Resize( n, n );
     auto riffleFill = 
-      [&]( Int i, Int j )
+      [&]( Int i, Int j ) -> F
       { const Int k = 2*i - j + 1;
         if( k >= 0 && k <= n+1 )
             return Exp(logBinom[k]-gamma+logEuler[j]-logEuler[i]);
         else
             return Base<F>(0); 
       };
-    IndexDependentFill( P, std::function<F(Int,Int)>(riffleFill) );
+    IndexDependentFill( P, function<F(Int,Int)>(riffleFill) );
 }
 
 template<typename F>
 void RiffleStationary( Matrix<F>& PInf, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("RiffleStationary"))    
+    DEBUG_ONLY(CSE cse("RiffleStationary"))    
     typedef Base<F> Real;
     // NOTE: This currently requires quadratic time
-    std::vector<Real> sigma(n,0), sigmaTmp(n,0);
+    vector<Real> sigma(n,0), sigmaTmp(n,0);
     sigma[0] = sigmaTmp[0] = 1;
     for( Int j=1; j<n; ++j )
     {
@@ -105,16 +105,16 @@ void RiffleStationary( Matrix<F>& PInf, Int n )
     
     PInf.Resize( n, n );
     auto riffleStatFill = [&]( Int i, Int j ) { return sigma[j]; };
-    IndexDependentFill( PInf, std::function<F(Int,Int)>(riffleStatFill) );
+    IndexDependentFill( PInf, function<F(Int,Int)>(riffleStatFill) );
 }
 
 template<typename F>
 void RiffleStationary( AbstractDistMatrix<F>& PInf, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("RiffleStationary"))    
+    DEBUG_ONLY(CSE cse("RiffleStationary"))    
     typedef Base<F> Real;
     // NOTE: This currently requires quadratic time
-    std::vector<Real> sigma(n,0), sigmaTmp(n,0);
+    vector<Real> sigma(n,0), sigmaTmp(n,0);
     sigma[0] = sigmaTmp[0] = 1;
     for( Int j=1; j<n; ++j )
     {
@@ -128,16 +128,16 @@ void RiffleStationary( AbstractDistMatrix<F>& PInf, Int n )
 
     PInf.Resize( n, n );
     auto riffleStatFill = [&]( Int i, Int j ) { return sigma[j]; };
-    IndexDependentFill( PInf, std::function<F(Int,Int)>(riffleStatFill) );
+    IndexDependentFill( PInf, function<F(Int,Int)>(riffleStatFill) );
 }
 
 template<typename F>
 void RiffleStationary( AbstractBlockDistMatrix<F>& PInf, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("RiffleStationary"))    
+    DEBUG_ONLY(CSE cse("RiffleStationary"))    
     typedef Base<F> Real;
     // NOTE: This currently requires quadratic time
-    std::vector<Real> sigma(n,0), sigmaTmp(n,0);
+    vector<Real> sigma(n,0), sigmaTmp(n,0);
     sigma[0] = sigmaTmp[0] = 1;
     for( Int j=1; j<n; ++j )
     {
@@ -151,13 +151,13 @@ void RiffleStationary( AbstractBlockDistMatrix<F>& PInf, Int n )
     
     PInf.Resize( n, n );
     auto riffleStatFill = [&]( Int i, Int j ) { return sigma[j]; };
-    IndexDependentFill( PInf, std::function<F(Int,Int)>(riffleStatFill) );
+    IndexDependentFill( PInf, function<F(Int,Int)>(riffleStatFill) );
 }
 
 template<typename F>
 void Riffle( Matrix<F>& P, Matrix<F>& PInf, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Riffle"))
+    DEBUG_ONLY(CSE cse("Riffle"))
     Riffle( P, n );
     RiffleStationary( PInf, n );
 }
@@ -165,7 +165,7 @@ void Riffle( Matrix<F>& P, Matrix<F>& PInf, Int n )
 template<typename F>
 void Riffle( AbstractDistMatrix<F>& P, AbstractDistMatrix<F>& PInf, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Riffle"))
+    DEBUG_ONLY(CSE cse("Riffle"))
     Riffle( P, n );
     PInf.SetGrid( P.Grid() );
     PInf.AlignWith( P.DistData() );
@@ -176,7 +176,7 @@ template<typename F>
 void Riffle
 ( AbstractBlockDistMatrix<F>& P, AbstractBlockDistMatrix<F>& PInf, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Riffle"))
+    DEBUG_ONLY(CSE cse("Riffle"))
     Riffle( P, n );
     PInf.SetGrid( P.Grid() );
     PInf.AlignWith( P.DistData() );
@@ -186,22 +186,23 @@ void Riffle
 template<typename F>
 void RiffleDecay( Matrix<F>& A, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("RiffleDecay"))
+    DEBUG_ONLY(CSE cse("RiffleDecay"))
     Riffle( A, n );
     Matrix<F> PInf;
     RiffleStationary( PInf, n );
-    Axpy( F(-1), PInf, A );
+    A -= PInf;
 }
 
 template<typename F>
 void RiffleDecay( AbstractDistMatrix<F>& A, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("RiffleDecay"))
+    DEBUG_ONLY(CSE cse("RiffleDecay"))
     Riffle( A, n );
-    std::unique_ptr<AbstractDistMatrix<F>> PInf( A.Construct(A.Grid()) );
+    unique_ptr<AbstractDistMatrix<F>> 
+      PInf( A.Construct(A.Grid(),A.Root()) );
     PInf->AlignWith( A.DistData() );
     RiffleStationary( *PInf, n );
-    Axpy( F(-1), *PInf, A );
+    A -= *PInf;
 }
 
 // TODO: AbstractBlockDistMatrix version
@@ -223,6 +224,7 @@ void RiffleDecay( AbstractDistMatrix<F>& A, Int n )
   template void RiffleDecay( AbstractDistMatrix<F>& A, Int n );
 
 #define EL_NO_INT_PROTO
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

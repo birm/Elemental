@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -7,7 +7,7 @@
    http://opensource.org/licenses/BSD-2-Clause
 */
 #include "El.hpp"
-#include "El-C.h"
+#include "El.h"
 
 extern "C" {
 
@@ -16,12 +16,13 @@ ElError ElPrintVersion( FILE* stream )
     // There does not seem to be a portable means of converting C-style
     // filehandles to C++ filestreams, so we will simply reproduce the 
     // functionality of El::PrintVersion.    
-    fprintf( stream, "Elemental version information:\n"
-                     " Git revision: %s\n"
-                     " Version:      %s.%s\n"
-                     " Build type:   %s\n\n",
-             EL_GIT_SHA1, EL_VERSION_MAJOR, EL_VERSION_MINOR, 
-             EL_CMAKE_BUILD_TYPE );
+    fprintf
+    ( stream, 
+      "Elemental version information:\n"
+      "  Git revision: %s\n"
+      "  Version:      %s.%s\n"
+      "  Build type:   %s\n\n",
+      EL_GIT_SHA1, EL_VERSION_MAJOR, EL_VERSION_MINOR, EL_CMAKE_BUILD_TYPE );
     return EL_SUCCESS;
 }
 
@@ -29,44 +30,140 @@ const char* ElErrorString( ElError error )
 {
     if( error == EL_SUCCESS )
     {
-        const char* errString = "EL_SUCCESS";
-        return errString;
+        static const char* successString = "EL_SUCCESS";
+        return successString;
     }
     else if( error == EL_ALLOC_ERROR )
     {
-        const char* errString = "EL_ALLOC_ERROR";
-        return errString;
+        static const char* allocString = "EL_ALLOC_ERROR";
+        return allocString;
     }
     else if( error == EL_OUT_OF_BOUNDS_ERROR )
     {
-        const char* errString = "EL_OUT_OF_BOUNDS_ERROR";
-        return errString;
+        static const char* oobString = "EL_OUT_OF_BOUNDS_ERROR";
+        return oobString;
     }
     else if( error == EL_ARG_ERROR )
     {
-        const char* errString = "EL_ARG_ERROR";
-        return errString;
+        static const char* argString = "EL_ARG_ERROR";
+        return argString;
     }
     else if( error == EL_LOGIC_ERROR )
     {
-        const char* errString = "EL_LOGIC_ERROR";
-        return errString;
+        static const char* logicString = "EL_LOGIC_ERROR";
+        return logicString;
     }
     else if( error == EL_RUNTIME_ERROR )
     {
-        const char* errString = "EL_RUNTIME_ERROR";
-        return errString;
+        static const char* runtimeString = "EL_RUNTIME_ERROR";
+        return runtimeString;
     }
     else
     {
-        const char* errString = "EL_ERROR";
+        static const char* errString = "EL_ERROR";
         return errString;
     }
 }
 
-// TODO: ElPrintConfig
-// TODO: ElPrintCCompilerInfo
-// TODO: ElPrintCxxCompilerInfo
+ElError ElPrintConfig( FILE* stream )
+{
+    // There does not seem to be a portable means of converting C-style
+    // filehandles to C++ filestreams, so we will simply reproduce the 
+    // functionality of El::PrintConfig.    
+    fprintf
+    ( stream, 
+      "Elemental configuration:\n"
+      "  Math libraries:               %s\n"
+#ifdef EL_HAVE_FLA_BSVD
+      "  Have FLAME bidiagonal SVD:    YES\n"
+#else
+      "  Have FLAME bidiagonal SVD:    NO\n"
+#endif
+#ifdef EL_HYBRID
+      "  Hybrid mode:                  YES\n"
+#else
+      "  Hybrid mode:                  NO\n"
+#endif
+#ifdef EL_HAVE_QT5
+      "  Have Qt5:                     YES\n"
+#else
+      "  Have Qt5:                     NO\n"
+#endif
+#ifdef EL_AVOID_COMPLEX_MPI
+      "  Avoiding complex MPI:         YES\n"
+#else
+      "  Avoiding complex MPI:         NO\n"
+#endif
+#ifdef EL_HAVE_MPI_REDUCE_SCATTER_BLOCK
+      "  Have MPI_Reducescatter_block: YES\n"
+#else
+      "  Have MPI_Reducescatter_block: NO\n"
+#endif
+#ifdef EL_HAVE_MPI_IN_PLACE
+      "  Have MPI_IN_PLACE:            YES\n"
+#else
+      "  Have MPI_IN_PLACE:            NO\n"
+#endif
+#ifdef EL_REDUCE_SCATTER_BLOCK_VIA_ALLREDUCE
+      "  AllReduce ReduceScatterBlock: YES\n"
+#else
+      "  AllReduce ReduceScatterBlock: NO\n"
+#endif
+#ifdef EL_USE_BYTE_ALLGATHERS
+      "  Use byte AllGathers:          YES\n",
+#else
+      "  Use byte AllGathers:          NO\n",
+#endif
+      EL_MATH_LIBS );
+    return EL_SUCCESS;
+}
+
+ElError ElPrintCCompilerInfo( FILE* stream )
+{
+    // There does not seem to be a portable means of converting C-style
+    // filehandles to C++ filestreams, so we will simply reproduce the 
+    // functionality of El::PrintCCompilerInfo.    
+    fprintf
+    ( stream, 
+      "Elemental's C compiler info:\n"
+      "  EL_CMAKE_C_COMPILER:    %s\n"
+      "  EL_MPI_C_COMPILER:      %s\n"
+      "  EL_MPI_C_INCLUDE_PATHS: %s\n"
+      "  EL_MPI_C_COMPILE_FLAGS: %s\n"
+      "  EL_MPI_LINK_FLAGS:      %s\n"
+      "  EL_MPI_C_LIBRARIES:     %s\n",
+      EL_CMAKE_C_COMPILER, EL_MPI_C_COMPILER, EL_MPI_C_INCLUDE_PATH,
+      EL_MPI_C_COMPILE_FLAGS, EL_MPI_LINK_FLAGS, EL_MPI_C_LIBRARIES );
+    return EL_SUCCESS;
+}
+
+ElError ElPrintCxxCompilerInfo( FILE* stream )
+{
+    // There does not seem to be a portable means of converting C-style
+    // filehandles to C++ filestreams, so we will simply reproduce the 
+    // functionality of El::PrintCxxCompilerInfo.    
+    fprintf
+    ( stream, 
+      "Elemental's C compiler info:\n"
+      "  EL_CMAKE_CXX_COMPILER:    %s\n"
+      "  EL_MPI_CXX_COMPILER:      %s\n"
+      "  EL_MPI_CXX_INCLUDE_PATHS: %s\n"
+      "  EL_MPI_CXX_COMPILE_FLAGS: %s\n"
+      "  EL_MPI_LINK_FLAGS:        %s\n"
+      "  EL_MPI_CXX_LIBRARIES:     %s\n",
+      EL_CMAKE_CXX_COMPILER, EL_MPI_CXX_COMPILER, EL_MPI_CXX_INCLUDE_PATH,
+      EL_MPI_CXX_COMPILE_FLAGS, EL_MPI_LINK_FLAGS, EL_MPI_CXX_LIBRARIES );
+    return EL_SUCCESS;
+}
+
+ElError ElUsing64BitInt( bool* using64 )
+{ EL_TRY( *using64 = El::Using64BitInt() ) }
+
+ElError ElUsing64BitBlasInt( bool* using64 )
+{ EL_TRY( *using64 = El::Using64BitBlasInt() ) }
+
+ElError ElSizeOfBool( unsigned* boolSize )
+{ EL_TRY( *boolSize = sizeof(bool); ) }
 
 ElError ElInitialize( int* argc, char*** argv )
 { EL_TRY( El::Initialize( *argc, *argv ) ) }

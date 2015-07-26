@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -20,6 +20,7 @@ main( int argc, char* argv[] )
     {
         const Int m = Input("--numExamples","number of examples",200);
         const Int n = Input("--numFeatures","number of features",100);
+        const bool useIPM = Input("--useIPM","use Interior Point?",true);
         const Int maxIter = Input("--maxIter","maximum # of iter's",500);
         const Real gamma = Input("--gamma","two-norm coefficient",1.);
         const Real rho = Input("--rho","augmented Lagrangian param.",1.);
@@ -35,7 +36,7 @@ main( int argc, char* argv[] )
         Gaussian( w, n, 1 );
         {
             const Real wNorm = FrobeniusNorm( w );
-            Scale( Real(1)/wNorm, w );
+            w *= 1/wNorm;
         }
         Real offset = SampleNormal();
         mpi::Broadcast( offset, 0, mpi::COMM_WORLD );
@@ -57,10 +58,10 @@ main( int argc, char* argv[] )
         Gemv( NORMAL, Real(1), G, w, -offset, q );
         auto sgnMap = []( Real alpha ) 
                       { return alpha >= 0 ? Real(1) : Real(-1); }; 
-        EntrywiseMap( q, std::function<Real(Real)>(sgnMap) );
+        EntrywiseMap( q, function<Real(Real)>(sgnMap) );
 
         if( mpi::WorldRank() == 0 )
-            std::cout << "offset=" << offset << std::endl;
+            cout << "offset=" << offset << endl;
         if( print )
         {
             Print( w, "w" );
@@ -70,17 +71,24 @@ main( int argc, char* argv[] )
         if( display )
             Display( G, "G" );
 
+        SVMCtrl<Real> ctrl;
+        ctrl.useIPM = useIPM;
+        ctrl.modelFitCtrl.rho = rho;
+        ctrl.modelFitCtrl.maxIter = maxIter;
+        ctrl.modelFitCtrl.inv = inv;
+        ctrl.modelFitCtrl.progress = progress;
+
         DistMatrix<Real> wHatSVM;
-        SVM( G, q, wHatSVM, gamma, rho, maxIter, inv, progress );
+        SVM( G, q, gamma, wHatSVM, ctrl );
         auto wSVM = View( wHatSVM, 0, 0, n, 1 );
         const Real offsetSVM = -wHatSVM.Get(n,0);
         const Real wSVMNorm = FrobeniusNorm( wSVM );
         if( mpi::WorldRank() == 0 )
-            std::cout << "|| wSVM ||_2=" << wSVMNorm << "\n"
-                      << "margin      =" << Real(2)/wSVMNorm << "\n"
-                      << "offsetSVM=" << offsetSVM << "\n"
-                      << "offsetSVM / || wSVM ||_2=" << offsetSVM/wSVMNorm 
-                      << std::endl;
+            cout << "|| wSVM ||_2=" << wSVMNorm << "\n"
+                 << "margin      =" << Real(2)/wSVMNorm << "\n"
+                 << "offsetSVM=" << offsetSVM << "\n"
+                 << "offsetSVM / || wSVM ||_2=" << offsetSVM/wSVMNorm 
+                 << endl;
         if( print )
             Print( wSVM, "wSVM" );
 
@@ -88,16 +96,15 @@ main( int argc, char* argv[] )
         DistMatrix<Real> qSVM;
         Ones( qSVM, m, 1 );
         Gemv( NORMAL, Real(1), G, wSVM, -offsetSVM, qSVM );
-        EntrywiseMap( qSVM, std::function<Real(Real)>(sgnMap) );
+        EntrywiseMap( qSVM, function<Real(Real)>(sgnMap) );
         if( print )
             Print( qSVM, "qSVM" );
-        Axpy( Real(-1), q, qSVM );
+        qSVM -= q;
         const Real numWrong = OneNorm(qSVM) / Real(2);
         if( mpi::WorldRank() == 0 )
-            std::cout << "ratio misclassified: " << numWrong << "/" << m 
-                      << std::endl;
+            cout << "ratio misclassified: " << numWrong << "/" << m << endl;
     }
-    catch( std::exception& e ) { ReportException(e); }
+    catch( exception& e ) { ReportException(e); }
 
     Finalize();
     return 0;

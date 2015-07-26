@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -22,12 +22,13 @@ std::string DistToString( Dist dist )
     std::string distString;
     switch( dist )
     {
-        case MC: distString = "MC"; break;
-        case MD: distString = "MD"; break;
-        case MR: distString = "MR"; break;
-        case VC: distString = "VC"; break;
-        case VR: distString = "VR"; break;
-        default: distString = "* "; break;
+        case CIRC: distString = "o "; break;
+        case MC:   distString = "MC";   break;
+        case MD:   distString = "MD";   break;
+        case MR:   distString = "MR";   break;
+        case VC:   distString = "VC";   break;
+        case VR:   distString = "VR";   break;
+        default:   distString = "* ";   break;
     }
     return distString;
 }
@@ -49,6 +50,8 @@ Dist StringToDist( std::string s )
         dist = VR;
     else if( s == "* " || s == " *" || s == "*" )
         dist = STAR;
+    else if( s == "o " || s == " o" || s == "o" )
+        dist = CIRC;
     else
         LogicError
         ("StringToDist expects string in "
@@ -181,9 +184,15 @@ UpperOrLower CharToUpperOrLower( char c )
 
 } // namespace UpperOrLowerNS
 
-template class SafeProduct<float>;
-template class SafeProduct<double>;
-template class SafeProduct<Complex<float>>;
-template class SafeProduct<Complex<double>>;
+template struct SafeProduct<float>;
+template struct SafeProduct<double>;
+#ifdef EL_ENABLE_QUAD
+template struct SafeProduct<Quad>;
+#endif
+template struct SafeProduct<Complex<float>>;
+template struct SafeProduct<Complex<double>>;
+#ifdef EL_ENABLE_QUAD
+template struct SafeProduct<Complex<Quad>>;
+#endif
 
 } // namespace El

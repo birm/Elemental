@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -13,7 +13,7 @@ namespace El {
 template<typename Real>
 void FoxLi( Matrix<Complex<Real>>& A, Int n, Real omega )
 {
-    DEBUG_ONLY(CallStackEntry cse("FoxLi"))
+    DEBUG_ONLY(CSE cse("FoxLi"))
     typedef Complex<Real> C;
     const Real pi = 4*Atan( Real(1) );
     const C phi = Sqrt( C(0,omega/pi) ); 
@@ -29,7 +29,7 @@ void FoxLi( Matrix<Complex<Real>>& A, Int n, Real omega )
     }
     Matrix<Real> x, Z;
     HermitianTridiagEig( d, e, x, Z, UNSORTED );
-    auto z = Z( IR(0,1), IR(0,n) );
+    auto z = Z( IR(0), ALL );
     Matrix<Real> sqrtWeights( z ), sqrtWeightsTrans;
     for( Int j=0; j<n; ++j )
         sqrtWeights.Set( 0, j, Sqrt(2)*Abs(sqrtWeights.Get(0,j)) );
@@ -57,7 +57,7 @@ void FoxLi( Matrix<Complex<Real>>& A, Int n, Real omega )
 template<typename Real>
 void FoxLi( AbstractDistMatrix<Complex<Real>>& APre, Int n, Real omega )
 {
-    DEBUG_ONLY(CallStackEntry cse("FoxLi"))
+    DEBUG_ONLY(CSE cse("FoxLi"))
     typedef Complex<Real> C;
     const Real pi = 4*Atan( Real(1) );
     const C phi = Sqrt( C(0,omega/pi) ); 
@@ -79,7 +79,7 @@ void FoxLi( AbstractDistMatrix<Complex<Real>>& APre, Int n, Real omega )
     DistMatrix<Real,VR,STAR> x(g);
     DistMatrix<Real,STAR,VR> Z(g);
     HermitianTridiagEig( d, e, x, Z, UNSORTED );
-    auto z = Z( IR(0,1), IR(0,n) );
+    auto z = Z( IR(0), ALL );
     DistMatrix<Real,STAR,VR> sqrtWeights( z );
     for( Int jLoc=0; jLoc<sqrtWeights.LocalWidth(); ++jLoc )
         sqrtWeights.SetLocal

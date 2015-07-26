@@ -16,17 +16,14 @@ set(MPI_Fortran_COMPILE_FLAGS "")
 set(MPI_C_INCLUDE_PATH       /opt/apps/intel14/mvapich2/2.0b/include)
 set(MPI_CXX_INCLUDE_PATH     ${MPI_C_INCLUDE_PATH})
 set(MPI_Fortran_INCLUDE_PATH ${MPI_C_INCLUDE_PATH})
-set(MPI_C_LINK_FLAGS "-Wl,-rpath,/opt/apps/limic2/0.5.5/lib -L/opt/apps/limic2/0.5.5/lib -L/opt/apps/intel14/mvapich2/2.0b/lib -L/opt/ofed/lib64/")
-set(MPI_CXX_LINK_FLAGS ${MPI_C_LINK_FLAGS})
-set(MPI_Fortran_LINK_FLAGS ${MPI_C_LINK_FLAGS})
+set(MPI_LINK_FLAGS "-Wl,-rpath,/opt/apps/limic2/0.5.5/lib -L/opt/apps/limic2/0.5.5/lib -L/opt/apps/intel14/mvapich2/2.0b/lib -L/opt/ofed/lib64/")
 set(MPI_BASE_LIBS 
     "-lmpich -lopa -llimic2 -lpthread -lrdmacm -libverbs -libumad -ldl -lrt")
 set(MPI_C_LIBRARIES "-limf ${MPI_BASE_LIBS}")
 set(MPI_CXX_LIBRARIES "-limf -lmpichcxx ${MPI_BASE_LIBS}")
 set(MPI_Fortran_LIBRARIES "-limf -lmpichf90 ${MPI_BASE_LIBS}")
 
-if(CMAKE_BUILD_TYPE MATCHES PureDebug OR
-   CMAKE_BUILD_TYPE MATCHES HybridDebug)
+if(CMAKE_BUILD_TYPE MATCHES Debug)
   set(CXX_FLAGS "-g")
 else()
   set(CXX_FLAGS "-O3")
@@ -34,4 +31,4 @@ endif()
 
 set(OpenMP_CXX_FLAGS "-openmp")
 
-set(MATH_LIBS "-lmkl_scalapack_lp64 -lmkl_blacs_intelmpi_lp64 -mkl")
+set(MATH_LIBS "-L/opt/apps/intel/13/composer_xe_2013_sp1.1.106/mkl/lib/intel64 -L/opt/apps/intel/13/composer_xe_2013_sp1.1.106/compiler/lib/intel64 -lmkl_rt")

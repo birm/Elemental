@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson, Lexing Ying,
+   Copyright (c) 2009-2015, Jack Poulson, Lexing Ying,
    The University of Texas at Austin, Stanford University, and the
    Georgia Insitute of Technology.
    All rights reserved.
@@ -22,65 +22,67 @@ class DistMap
 {
 public:
     // Constructors and destructors
-    DistMap();
-    DistMap( mpi::Comm comm );
-    DistMap( int numSources, mpi::Comm comm );
+    DistMap( mpi::Comm comm=mpi::COMM_WORLD );
+    DistMap( Int numSources, mpi::Comm comm=mpi::COMM_WORLD );
     // TODO: Constructor for building from a DistMap
     ~DistMap();
 
     // If the total number of sources is partitioned among the processes, 
     // calling this routine will have the DistMap map the indices to the 
     // owning process
-    void StoreOwners
-    ( int numSource, std::vector<int>& localInds, mpi::Comm comm );
+    void StoreOwners( Int numSource, vector<Int>& localInds, mpi::Comm comm );
 
     // Map manipulation
     // Collectively map each process's local set of indices
-    void Translate( std::vector<int>& localInds ) const;
-    // Form the inverse map
-    void FormInverse( DistMap& inverseMap ) const;
-    // composite(i) := second(first(i))
+    void Translate( vector<Int>& localInds ) const;
+   // composite(i) := second(first(i))
     void Extend( DistMap& firstMap ) const;
     void Extend( const DistMap& firstMap, DistMap& compositeMap ) const;
 
     // High-level information
-    int NumSources() const;
+    Int NumSources() const;
 
     // Communicator management
     void SetComm( mpi::Comm comm );
     mpi::Comm Comm() const;
 
     // Distribution information
-    int Blocksize() const;
-    int FirstLocalSource() const;
-    int NumLocalSources() const;
+    Int Blocksize() const;
+    Int FirstLocalSource() const;
+    Int NumLocalSources() const;
+    int RowOwner( Int i ) const;
 
     // Local data
-    int GetLocal( int localSource ) const;
-    void SetLocal( int localSource, int target );
-    int* Buffer();
-    const int* Buffer() const;
-    std::vector<int>& Map();
-    const std::vector<int>& Map() const;
+    Int GetLocal( Int localSource ) const;
+    void SetLocal( Int localSource, Int target );
+    Int* Buffer();
+    const Int* Buffer() const;
+    vector<Int>& Map();
+    const vector<Int>& Map() const;
 
     // For modifying the size of the map
     void Empty();
-    void Resize( int numSources );
+    void Resize( Int numSources );
 
     // Assignment
     const DistMap& operator=( const DistMap& map );
 
 private:
-    int numSources_;
+    Int numSources_;
 
     mpi::Comm comm_;
 
-    int blocksize_;
-    int firstLocalSource_;
+    Int blocksize_;
+    Int firstLocalSource_;
 
-    std::vector<int> map_;
+    vector<Int> map_;
+
+    void InitializeLocalData();
 };
 
+void InvertMap( const vector<Int>& map, vector<Int>& inverseMap );
+void InvertMap( const DistMap& map, DistMap& inverseMap );
+  
 } // namespace El
 
 #endif // ifndef EL_CORE_DISTMAP_DECL_HPP

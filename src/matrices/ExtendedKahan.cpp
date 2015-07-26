@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -25,7 +25,7 @@ template<typename F>
 inline void MakeExtendedKahan
 ( Matrix<F>& A, Base<F> phi, Base<F> mu )
 {
-    DEBUG_ONLY(CallStackEntry cse("MakeExtendedKahan"))
+    DEBUG_ONLY(CSE cse("MakeExtendedKahan"))
     typedef Base<F> Real;
 
     if( A.Height() != A.Width() )
@@ -49,13 +49,13 @@ inline void MakeExtendedKahan
     // l x l blocks of its 3 x 3 partitioning.
     MakeIdentity( A );
     auto ABlock = A( IR(2*l,3*l), IR(2*l,3*l) );
-    Scale( mu, ABlock );
+    ABlock *= mu;
     ABlock = A( IR(0,l), IR(l,2*l) );
     Walsh( ABlock, k );
-    Scale( -phi, ABlock );
+    ABlock *= -phi;
     ABlock = A( IR(l,2*l), IR(2*l,3*l) );
     Walsh( ABlock, k );
-    Scale( phi, ABlock );
+    ABlock *= phi;
 
     // Now scale A by S
     const Real zeta = Sqrt(Real(1)-phi*phi);
@@ -71,7 +71,7 @@ template<typename F>
 inline void MakeExtendedKahan
 ( AbstractDistMatrix<F>& A, Base<F> phi, Base<F> mu )
 {
-    DEBUG_ONLY(CallStackEntry cse("MakeExtendedKahan"))
+    DEBUG_ONLY(CSE cse("MakeExtendedKahan"))
     typedef Base<F> Real;
 
     if( A.Height() != A.Width() )
@@ -94,15 +94,16 @@ inline void MakeExtendedKahan
     // Start by setting A to the identity, and then modify the necessary 
     // l x l blocks of its 3 x 3 partitioning.
     MakeIdentity( A );
-    std::unique_ptr<AbstractDistMatrix<F>> ABlock( A.Construct(A.Grid()) );
+    unique_ptr<AbstractDistMatrix<F>> 
+        ABlock( A.Construct(A.Grid(),A.Root()) );
     View( *ABlock, A, IR(2*l,3*l), IR(2*l,3*l) );
-    Scale( mu, *ABlock );
+    *ABlock *= mu;
     View( *ABlock, A, IR(0,l), IR(l,2*l) );
     Walsh( *ABlock, k );
-    Scale( -phi, *ABlock );
+    *ABlock *= -phi;
     View( *ABlock, A, IR(l,2*l), IR(2*l,3*l) );
     Walsh( *ABlock, k );
-    Scale( phi, *ABlock );
+    *ABlock *= phi;
 
     // Now scale A by S
     const Real zeta = Sqrt(Real(1)-phi*phi);
@@ -118,7 +119,7 @@ inline void MakeExtendedKahan
 template<typename F>
 void ExtendedKahan( Matrix<F>& A, Int k, Base<F> phi, Base<F> mu )
 {
-    DEBUG_ONLY(CallStackEntry cse("ExtendedKahan"))
+    DEBUG_ONLY(CSE cse("ExtendedKahan"))
     const Int n = 3*(1u<<k);
     A.Resize( n, n );
     MakeExtendedKahan( A, phi, mu );
@@ -127,7 +128,7 @@ void ExtendedKahan( Matrix<F>& A, Int k, Base<F> phi, Base<F> mu )
 template<typename F>
 void ExtendedKahan( AbstractDistMatrix<F>& A, Int k, Base<F> phi, Base<F> mu )
 {
-    DEBUG_ONLY(CallStackEntry cse("ExtendedKahan"))
+    DEBUG_ONLY(CSE cse("ExtendedKahan"))
     const Int n = 3*(1u<<k);
     A.Resize( n, n );
     MakeExtendedKahan( A, phi, mu );
@@ -140,6 +141,7 @@ void ExtendedKahan( AbstractDistMatrix<F>& A, Int k, Base<F> phi, Base<F> mu )
   ( AbstractDistMatrix<F>& A, Int k, Base<F> phi, Base<F> mu );
 
 #define EL_NO_INT_PROTO
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

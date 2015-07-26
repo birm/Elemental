@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -7,7 +7,7 @@
    http://opensource.org/licenses/BSD-2-Clause
 */
 #include "El.hpp"
-#include "El-C.h"
+#include "El.h"
 using namespace El;
 
 extern "C" {
@@ -189,10 +189,10 @@ ElError ElGridOwningRank( ElConstGrid grid, int* owningRank )
 ElError ElGridViewingRank( ElConstGrid grid, int* viewingRank )
 { EL_TRY( *viewingRank = CReflect(grid)->ViewingRank() ) }
 
-// int Grid::VCToViewingMap( int vcRank ) const
-// --------------------------------------------
-ElError ElGridVCToViewingMap( ElConstGrid grid, int vcRank, int* viewingRank )
-{ EL_TRY( *viewingRank = CReflect(grid)->VCToViewingMap(vcRank) ) }
+// int Grid::VCToViewing( int vcRank ) const
+// -----------------------------------------
+ElError ElGridVCToViewing( ElConstGrid grid, int vcRank, int* viewingRank )
+{ EL_TRY( *viewingRank = CReflect(grid)->VCToViewing(vcRank) ) }
 
 // mpi::Group Grid::OwningGroup() const
 // ------------------------------------
@@ -209,20 +209,15 @@ ElError ElGridOwningComm( ElConstGrid grid, MPI_Comm* comm )
 ElError ElGridViewingComm( ElConstGrid grid, MPI_Comm* comm )
 { EL_TRY( *comm = CReflect(grid)->ViewingComm().comm ) }
 
-// int Grid::DiagPath( int vcRank ) const
+// int Grid::Diag( int vcRank ) const
+// ----------------------------------
+ElError ElGridDiag( ElConstGrid grid, int vcRank, int* diag )
+{ EL_TRY( *diag = CReflect(grid)->Diag(vcRank) ) }
+
+// int Grid::DiagRank( int vcRank ) const
 // --------------------------------------
-ElError ElGridDiagPath( ElConstGrid grid, int vcRank, int* diagPath )
-{ EL_TRY( *diagPath = CReflect(grid)->DiagPath(vcRank) ) }
-
-// int Grid::DiagPathRank( int vcRank ) const
-// ------------------------------------------
-ElError ElGridDiagPathRank( ElConstGrid grid, int vcRank, int* diagPathRank )
-{ EL_TRY( *diagPathRank = CReflect(grid)->DiagPathRank(vcRank) ) }
-
-// int Grid::FirstVCRank( int diagPath ) const
-// -------------------------------------------
-ElError ElGridFirstVCRank( ElConstGrid grid, int vcRank, int* firstVCRank )
-{ EL_TRY( *firstVCRank = CReflect(grid)->FirstVCRank(vcRank) ) }
+ElError ElGridDiagRank( ElConstGrid grid, int vcRank, int* diagRank )
+{ EL_TRY( *diagRank = CReflect(grid)->DiagRank(vcRank) ) }
 
 // static int Grid::FindFactor( int p )
 // ------------------------------------

@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -43,29 +43,31 @@ FLA_Error FLA_Bsvd_v_opz_var1
 } // extern "C"
 
 namespace El {
+namespace flame {
 
-void FlaBidiagSVD
+void BidiagSVD
 ( int k, int mU, int mV, double* d, double* e, 
   double* U, int ldu, double* V, int ldv, 
   int numAccum, int maxNumIts, int bAlg )
 {
-    std::vector<Complex<double>> G( (k-1)*numAccum ), H( (k-1)*numAccum ); 
+    vector<Complex<double>> G( (k-1)*numAccum ), H( (k-1)*numAccum ); 
     FLA_Bsvd_v_opd_var1
     ( k, mU, mV, numAccum, maxNumIts, d, 1, e, 1, 
       G.data(), 1, k-1, H.data(), 1, k-1, U, 1, ldu, V, 1, ldv, bAlg );
 }
 
-void FlaBidiagSVD
+void BidiagSVD
 ( int k, int mU, int mV, double* d, double* e, 
   Complex<double>* U, int ldu, Complex<double>* V, int ldv, 
   int numAccum, int maxNumIts, int bAlg )
 {
-    std::vector<Complex<double>> G( (k-1)*numAccum ), H( (k-1)*numAccum ); 
+    vector<Complex<double>> G( (k-1)*numAccum ), H( (k-1)*numAccum ); 
     FLA_Bsvd_v_opz_var1
     ( k, mU, mV, numAccum, maxNumIts, d, 1, e, 1, 
       G.data(), 1, k-1, H.data(), 1, k-1, U, 1, ldu, V, 1, ldv, bAlg );
 }
 
+} // namespace flame
 } // namespace El
 
 #endif // ifdef EL_HAVE_FLA_BSVD

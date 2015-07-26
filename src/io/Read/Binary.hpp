@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -15,9 +15,9 @@ namespace read {
 
 template<typename T>
 inline void
-Binary( Matrix<T>& A, const std::string filename )
+Binary( Matrix<T>& A, const string filename )
 {
-    DEBUG_ONLY(CallStackEntry cse("read::Binary"))
+    DEBUG_ONLY(CSE cse("read::Binary"))
     std::ifstream file( filename.c_str(), std::ios::binary );
     if( !file.is_open() )
         RuntimeError("Could not open ",filename);
@@ -43,9 +43,9 @@ Binary( Matrix<T>& A, const std::string filename )
 
 template<typename T>
 inline void
-Binary( AbstractDistMatrix<T>& A, const std::string filename )
+Binary( AbstractDistMatrix<T>& A, const string filename )
 {
-    DEBUG_ONLY(CallStackEntry cse("read::Binary"))
+    DEBUG_ONLY(CSE cse("read::Binary"))
     std::ifstream file( filename.c_str(), std::ios::binary );
     if( !file.is_open() )
         RuntimeError("Could not open ",filename);
@@ -105,9 +105,9 @@ Binary( AbstractDistMatrix<T>& A, const std::string filename )
 
 template<typename T>
 inline void
-Binary( AbstractBlockDistMatrix<T>& A, const std::string filename )
+Binary( AbstractBlockDistMatrix<T>& A, const string filename )
 {
-    DEBUG_ONLY(CallStackEntry cse("read::Binary"))
+    DEBUG_ONLY(CSE cse("read::Binary"))
     std::ifstream file( filename.c_str(), std::ios::binary );
     if( !file.is_open() )
         RuntimeError("Could not open ",filename);

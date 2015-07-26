@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -12,57 +12,58 @@ namespace El {
 
 template<typename Real>
 void Egorov
-( Matrix<Complex<Real>>& A, std::function<Real(Int,Int)> phase, Int n )
+( Matrix<Complex<Real>>& A, function<Real(Int,Int)> phase, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Egorov"))
+    DEBUG_ONLY(CSE cse("Egorov"))
     A.Resize( n, n );
     auto egorovFill = 
-      [&]( Int i, Int j )
+      [&]( Int i, Int j ) -> Complex<Real>
       { const Real theta = phase(i,j);
         return Complex<Real>(Cos(theta),Sin(theta)); }; 
-    IndexDependentFill( A, std::function<Complex<Real>(Int,Int)>(egorovFill) );
+    IndexDependentFill( A, function<Complex<Real>(Int,Int)>(egorovFill) );
 }
 
 template<typename Real>
 void Egorov
 ( AbstractDistMatrix<Complex<Real>>& A, 
-  std::function<Real(Int,Int)> phase, Int n )
+  function<Real(Int,Int)> phase, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Egorov"))
+    DEBUG_ONLY(CSE cse("Egorov"))
     A.Resize( n, n );
     auto egorovFill = 
-      [&]( Int i, Int j )
+      [&]( Int i, Int j ) -> Complex<Real>
       { const Real theta = phase(i,j);
         return Complex<Real>(Cos(theta),Sin(theta)); }; 
-    IndexDependentFill( A, std::function<Complex<Real>(Int,Int)>(egorovFill) );
+    IndexDependentFill( A, function<Complex<Real>(Int,Int)>(egorovFill) );
 }
 
 template<typename Real>
 void Egorov
 ( AbstractBlockDistMatrix<Complex<Real>>& A,
-  std::function<Real(Int,Int)> phase, Int n )
+  function<Real(Int,Int)> phase, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("Egorov"))
+    DEBUG_ONLY(CSE cse("Egorov"))
     A.Resize( n, n );
     auto egorovFill = 
-      [&]( Int i, Int j )
+      [&]( Int i, Int j ) -> Complex<Real>
       { const Real theta = phase(i,j);
         return Complex<Real>(Cos(theta),Sin(theta)); }; 
-    IndexDependentFill( A, std::function<Complex<Real>(Int,Int)>(egorovFill) );
+    IndexDependentFill( A, function<Complex<Real>(Int,Int)>(egorovFill) );
 }
 
 #define PROTO(Real) \
   template void Egorov \
-  ( Matrix<Complex<Real>>& A, std::function<Real(Int,Int)> phase, Int n ); \
+  ( Matrix<Complex<Real>>& A, function<Real(Int,Int)> phase, Int n ); \
   template void Egorov \
   ( AbstractDistMatrix<Complex<Real>>& A, \
-    std::function<Real(Int,Int)> phase, Int n ); \
+    function<Real(Int,Int)> phase, Int n ); \
   template void Egorov \
   ( AbstractBlockDistMatrix<Complex<Real>>& A, \
-    std::function<Real(Int,Int)> phase, Int n );
+    function<Real(Int,Int)> phase, Int n );
 
 #define EL_NO_INT_PROTO
 #define EL_NO_COMPLEX_PROTO
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

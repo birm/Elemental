@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -16,14 +16,13 @@
 namespace El {
 
 template<typename T>
-void Spy( const Matrix<T>& A, std::string title, Base<T> tol )
+void Spy( const Matrix<T>& A, string title, Base<T> tol )
 {
-    DEBUG_ONLY(CallStackEntry cse("Spy"))
+    DEBUG_ONLY(CSE cse("Spy"))
 #ifdef EL_HAVE_QT5
     if( GuiDisabled() )
         LogicError("GUI was disabled");
 
-    // Convert A to double-precision since Qt's MOC does not support templates
     const Int m = A.Height();
     const Int n = A.Width();
     Matrix<Int>* ASpy = new Matrix<Int>( m, n );
@@ -44,9 +43,9 @@ void Spy( const Matrix<T>& A, std::string title, Base<T> tol )
 }
 
 template<typename T>
-void Spy( const AbstractDistMatrix<T>& A, std::string title, Base<T> tol )
+void Spy( const AbstractDistMatrix<T>& A, string title, Base<T> tol )
 {
-    DEBUG_ONLY(CallStackEntry cse("Spy"))
+    DEBUG_ONLY(CSE cse("Spy"))
 #ifdef EL_HAVE_QT5
     if( GuiDisabled() )
         LogicError("GUI was disabled");
@@ -67,9 +66,9 @@ void Spy( const AbstractDistMatrix<T>& A, std::string title, Base<T> tol )
 }
 
 template<typename T>
-void Spy( const AbstractBlockDistMatrix<T>& A, std::string title, Base<T> tol )
+void Spy( const AbstractBlockDistMatrix<T>& A, string title, Base<T> tol )
 {
-    DEBUG_ONLY(CallStackEntry cse("Spy"))
+    DEBUG_ONLY(CSE cse("Spy"))
 #ifdef EL_HAVE_QT5
     if( GuiDisabled() )
         LogicError("GUI was disabled");
@@ -90,12 +89,13 @@ void Spy( const AbstractBlockDistMatrix<T>& A, std::string title, Base<T> tol )
 }
 
 #define PROTO(T) \
-  template void Spy ( const Matrix<T>& A, std::string title, Base<T> tol ); \
+  template void Spy ( const Matrix<T>& A, string title, Base<T> tol ); \
   template void Spy \
-  ( const AbstractDistMatrix<T>& A, std::string title, Base<T> tol ); \
+  ( const AbstractDistMatrix<T>& A, string title, Base<T> tol ); \
   template void Spy \
-  ( const AbstractBlockDistMatrix<T>& A, std::string title, Base<T> tol ); 
+  ( const AbstractBlockDistMatrix<T>& A, string title, Base<T> tol ); 
 
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

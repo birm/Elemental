@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -24,7 +24,6 @@ Int MaxLength( Int n, Int numProcs );
 Int MaxLength_( Int n, Int numProcs );
 
 Int GlobalIndex( Int iLoc, Int shift, Int numProcs );
-Int LocalOffset( Int i,    Int shift, Int numProcs );
 
 // Indexing for block distributions
 // ================================
@@ -40,7 +39,6 @@ Int MaxBlockedLength ( Int n, Int bsize, Int cut, Int numProcs );
 Int MaxBlockedLength_( Int n, Int bsize, Int cut, Int numProcs );
 
 Int GlobalBlockedIndex( Int iLoc, Int shift, Int bsize, Int cut, Int numProcs );
-Int LocalBlockedOffset( Int i,    Int shift, Int bsize, Int cut, Int numProcs );
 
 // Miscellaneous indexing routines
 // ===============================

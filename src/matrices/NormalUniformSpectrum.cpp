@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -17,12 +17,12 @@ template<typename Real>
 void NormalUniformSpectrum
 ( Matrix<Complex<Real>>& A, Int n, Complex<Real> center, Real radius )
 {
-    DEBUG_ONLY(CallStackEntry cse("NormalUniformSpectrum"))
+    DEBUG_ONLY(CSE cse("NormalUniformSpectrum"))
     typedef Complex<Real> C;
     A.Resize( n, n );
 
     // Form d and D
-    std::vector<C> d( n );
+    vector<C> d( n );
     for( Int j=0; j<n; ++j )
         d[j] = SampleBall<C>( center, radius );
     Diagonal( A, d );
@@ -40,7 +40,7 @@ void NormalUniformSpectrum
 ( AbstractDistMatrix<Complex<Real>>& APre, Int n, 
   Complex<Real> center, Real radius )
 {
-    DEBUG_ONLY(CallStackEntry cse("NormalUniformSpectrum"))
+    DEBUG_ONLY(CSE cse("NormalUniformSpectrum"))
     typedef Complex<Real> C;
 
     auto APtr = WriteProxy<C,MC,MR>( &APre );
@@ -50,7 +50,7 @@ void NormalUniformSpectrum
     A.Resize( n, n );
 
     // Form d and D
-    std::vector<C> d( n );
+    vector<C> d( n );
     if( grid.Rank() == 0 )
         for( Int j=0; j<n; ++j )
             d[j] = SampleBall<C>( center, radius );

@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -19,26 +19,22 @@ namespace El {
 // (MC). Thus the columns will be distributed among columns of the process
 // grid.
 template<typename T>
-class DistMatrix<T,MC,STAR> : public GeneralDistMatrix<T,MC,STAR>
+class DistMatrix<T,MC,STAR> : public AbstractDistMatrix<T>
 {
 public:
     // Typedefs
     // ========
     typedef AbstractDistMatrix<T> absType;
-    typedef GeneralDistMatrix<T,MC,STAR> genType;
     typedef DistMatrix<T,MC,STAR> type;
 
     // Constructors and destructors
     // ============================
 
-    // Inherited constructors are part of C++11 but not yet widely supported.
-    //using GeneralDistMatrix<T,MC,STAR>::GeneralDistMatrix;
-
     // Create a 0 x 0 distributed matrix
-    DistMatrix( const El::Grid& g=DefaultGrid(), Int root=0 );
+    DistMatrix( const El::Grid& g=DefaultGrid(), int root=0 );
     // Create a height x width distributed matrix
     DistMatrix
-    ( Int height, Int width, const El::Grid& g=DefaultGrid(), Int root=0 );
+    ( Int height, Int width, const El::Grid& g=DefaultGrid(), int root=0 );
     // Create a copy of distributed matrix (redistribute if necessary)
     DistMatrix( const type& A );
     DistMatrix( const absType& A );
@@ -50,19 +46,19 @@ public:
     ~DistMatrix();
 
     DistMatrix<T,MC,STAR>* Construct
-    ( const El::Grid& g=DefaultGrid(), Int root=0 ) const override;
+    ( const El::Grid& g, int root ) const override;
     DistMatrix<T,STAR,MC>* ConstructTranspose
-    ( const El::Grid& g=DefaultGrid(), Int root=0 ) const override;
+    ( const El::Grid& g, int root ) const override;
     DistMatrix<T,MC,STAR>* ConstructDiagonal
-    ( const El::Grid& g=DefaultGrid(), Int root=0 ) const override;
+    ( const El::Grid& g, int root ) const override;
 
-    // Assignment and reconfiguration
-    // ==============================
+    // Operator overloading
+    // ====================
 
     // Return a view
     // -------------
-          type operator()( Range<Int> indVert, Range<Int> indHorz );
-    const type operator()( Range<Int> indVert, Range<Int> indHorz ) const;
+          type operator()( Range<Int> I, Range<Int> J );
+    const type operator()( Range<Int> I, Range<Int> J ) const;
 
     // Make a copy
     // -----------
@@ -87,19 +83,39 @@ public:
     // ---------------
     type& operator=( type&& A );
 
+    // Rescaling
+    // ---------
+    const type& operator*=( T alpha );
+
+    // Addition/subtraction
+    // --------------------
+    const type& operator+=( const absType& A );
+    const type& operator-=( const absType& A );
+
     // Basic queries
     // =============
     El::DistData DistData() const override;
-    mpi::Comm DistComm() const override;
-    mpi::Comm CrossComm() const override;
+
+    Dist ColDist()             const override;
+    Dist RowDist()             const override;
+    Dist PartialColDist()      const override;
+    Dist PartialRowDist()      const override;
+    Dist PartialUnionColDist() const override;
+    Dist PartialUnionRowDist() const override;
+    Dist CollectedColDist()    const override;
+    Dist CollectedRowDist()    const override;
+
+    mpi::Comm DistComm()      const override;
+    mpi::Comm CrossComm()     const override;
     mpi::Comm RedundantComm() const override;
-    mpi::Comm ColComm() const override;
-    mpi::Comm RowComm() const override;
-    Int RowStride() const override;
-    Int ColStride() const override;
-    Int DistSize() const override;
-    Int CrossSize() const override;
-    Int RedundantSize() const override;
+    mpi::Comm ColComm()       const override;
+    mpi::Comm RowComm()       const override;
+
+    int RowStride()     const override;
+    int ColStride()     const override;
+    int DistSize()      const override;
+    int CrossSize()     const override;
+    int RedundantSize() const override;
 
 private:
     // Friend declarations

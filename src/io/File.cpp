@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -25,7 +25,7 @@ const char* QtImageFormat( FileFormat format )
     }
 }
 
-std::string FileExtension( FileFormat format )
+string FileExtension( FileFormat format )
 {
     switch( format )
     {
@@ -45,7 +45,7 @@ std::string FileExtension( FileFormat format )
     }
 }
 
-FileFormat FormatFromExtension( const std::string ext )
+FileFormat FormatFromExtension( const string ext )
 {
     bool foundFormat = false;
     FileFormat format = BINARY;
@@ -63,16 +63,16 @@ FileFormat FormatFromExtension( const std::string ext )
     return format;
 }
 
-FileFormat DetectFormat( const std::string filename )
+FileFormat DetectFormat( const string filename )
 {
-    const std::string ext = filename.substr(filename.find_last_of(".")+1);
+    const string ext = filename.substr(filename.find_last_of(".")+1);
     return FormatFromExtension( ext );
 }
 
-std::ifstream::pos_type FileSize( std::ifstream& file )
+ifstream::pos_type FileSize( ifstream& file )
 {
     auto pos = file.tellg();
-    file.seekg( 0, std::ifstream::end );
+    file.seekg( 0, ifstream::end );
     auto numBytes = file.tellg();
     file.seekg( pos );
     return numBytes;

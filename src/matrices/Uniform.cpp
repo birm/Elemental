@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -15,15 +15,15 @@ namespace El {
 template<typename T>
 void MakeUniform( Matrix<T>& A, T center, Base<T> radius )
 {
-    DEBUG_ONLY(CallStackEntry cse("MakeUniform"))
+    DEBUG_ONLY(CSE cse("MakeUniform"))
     auto sampleBall = [=]() { return SampleBall(center,radius); };
-    EntrywiseFill( A, std::function<T()>(sampleBall) );
+    EntrywiseFill( A, function<T()>(sampleBall) );
 }
 
 template<typename T>
 void Uniform( Matrix<T>& A, Int m, Int n, T center, Base<T> radius )
 {
-    DEBUG_ONLY(CallStackEntry cse("Uniform"))
+    DEBUG_ONLY(CSE cse("Uniform"))
     A.Resize( m, n );
     MakeUniform( A, center, radius );
 }
@@ -31,25 +31,25 @@ void Uniform( Matrix<T>& A, Int m, Int n, T center, Base<T> radius )
 template<typename T>
 void MakeUniform( AbstractDistMatrix<T>& A, T center, Base<T> radius )
 {
-    DEBUG_ONLY(CallStackEntry cse("MakeUniform"))
+    DEBUG_ONLY(CSE cse("MakeUniform"))
     if( A.RedundantRank() == 0 )
         MakeUniform( A.Matrix(), center, radius );
-    A.BroadcastOver( A.RedundantComm(), 0 );
+    Broadcast( A, A.RedundantComm(), 0 );
 }
 
 template<typename T>
 void MakeUniform( AbstractBlockDistMatrix<T>& A, T center, Base<T> radius )
 {
-    DEBUG_ONLY(CallStackEntry cse("MakeUniform"))
+    DEBUG_ONLY(CSE cse("MakeUniform"))
     if( A.RedundantRank() == 0 )
         MakeUniform( A.Matrix(), center, radius );
-    A.BroadcastOver( A.RedundantComm(), 0 );
+    Broadcast( A, A.RedundantComm(), 0 );
 }
 
 template<typename T>
 void Uniform( AbstractDistMatrix<T>& A, Int m, Int n, T center, Base<T> radius )
 {
-    DEBUG_ONLY(CallStackEntry cse("Uniform"))
+    DEBUG_ONLY(CSE cse("Uniform"))
     A.Resize( m, n );
     MakeUniform( A, center, radius );
 }
@@ -58,7 +58,26 @@ template<typename T>
 void Uniform
 ( AbstractBlockDistMatrix<T>& A, Int m, Int n, T center, Base<T> radius )
 {
-    DEBUG_ONLY(CallStackEntry cse("Uniform"))
+    DEBUG_ONLY(CSE cse("Uniform"))
+    A.Resize( m, n );
+    MakeUniform( A, center, radius );
+}
+
+template<typename T>
+void MakeUniform( DistMultiVec<T>& X, T center, Base<T> radius )
+{
+    DEBUG_ONLY(CSE cse("MakeUniform"))
+    const int localHeight = X.LocalHeight();
+    const int width = X.Width();
+    for( int j=0; j<width; ++j )
+        for( int iLocal=0; iLocal<localHeight; ++iLocal )
+            X.SetLocal( iLocal, j, SampleBall(center,radius) );
+}
+
+template<typename T>
+void Uniform( DistMultiVec<T>& A, Int m, Int n, T center, Base<T> radius )
+{
+    DEBUG_ONLY(CSE cse("Uniform"))
     A.Resize( m, n );
     MakeUniform( A, center, radius );
 }
@@ -70,13 +89,17 @@ void Uniform
   ( AbstractDistMatrix<T>& A, T center, Base<T> radius ); \
   template void MakeUniform \
   ( AbstractBlockDistMatrix<T>& A, T center, Base<T> radius ); \
+  template void MakeUniform( DistMultiVec<T>& A, T center, Base<T> radius ); \
   template void Uniform \
   ( Matrix<T>& A, Int m, Int n, T center, Base<T> radius ); \
   template void Uniform \
   ( AbstractDistMatrix<T>& A, Int m, Int n, T center, Base<T> radius ); \
   template void Uniform \
-  ( AbstractBlockDistMatrix<T>& A, Int m, Int n, T center, Base<T> radius );
+  ( AbstractBlockDistMatrix<T>& A, Int m, Int n, T center, Base<T> radius ); \
+  template void Uniform \
+  ( DistMultiVec<T>& A, Int m, Int n, T center, Base<T> radius );
 
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -11,14 +11,14 @@
 namespace El {
 
 template<typename F1,typename F2> 
-void Cauchy( Matrix<F1>& A, const std::vector<F2>& x, const std::vector<F2>& y )
+void Cauchy( Matrix<F1>& A, const vector<F2>& x, const vector<F2>& y )
 {
-    DEBUG_ONLY(CallStackEntry cse("Cauchy"))
+    DEBUG_ONLY(CSE cse("Cauchy"))
     const Int m = x.size();
     const Int n = y.size();
     A.Resize( m, n );
     auto cauchyFill = 
-      [&]( Int i, Int j )
+      [&]( Int i, Int j ) -> F1
       {
          DEBUG_ONLY(
              // TODO: Use tolerance instead?
@@ -29,20 +29,20 @@ void Cauchy( Matrix<F1>& A, const std::vector<F2>& x, const std::vector<F2>& y )
          ) 
          return F1(1)/F1(x[i]-y[j]);
       };
-    IndexDependentFill( A, std::function<F1(Int,Int)>(cauchyFill) );
+    IndexDependentFill( A, function<F1(Int,Int)>(cauchyFill) );
 }
 
 template<typename F1,typename F2>
 void Cauchy
 ( AbstractDistMatrix<F1>& A, 
-  const std::vector<F2>& x, const std::vector<F2>& y )
+  const vector<F2>& x, const vector<F2>& y )
 {
-    DEBUG_ONLY(CallStackEntry cse("Cauchy"))
+    DEBUG_ONLY(CSE cse("Cauchy"))
     const Int m = x.size();
     const Int n = y.size();
     A.Resize( m, n );
     auto cauchyFill = 
-      [&]( Int i, Int j )
+      [&]( Int i, Int j ) -> F1
       {
          DEBUG_ONLY(
              // TODO: Use tolerance instead?
@@ -53,20 +53,20 @@ void Cauchy
          ) 
          return F1(1)/F1(x[i]-y[j]);
       };
-    IndexDependentFill( A, std::function<F1(Int,Int)>(cauchyFill) );
+    IndexDependentFill( A, function<F1(Int,Int)>(cauchyFill) );
 }
 
 template<typename F1,typename F2>
 void Cauchy
 ( AbstractBlockDistMatrix<F1>& A, 
-  const std::vector<F2>& x, const std::vector<F2>& y )
+  const vector<F2>& x, const vector<F2>& y )
 {
-    DEBUG_ONLY(CallStackEntry cse("Cauchy"))
+    DEBUG_ONLY(CSE cse("Cauchy"))
     const Int m = x.size();
     const Int n = y.size();
     A.Resize( m, n );
     auto cauchyFill = 
-      [&]( Int i, Int j )
+      [&]( Int i, Int j ) -> F1
       {
          DEBUG_ONLY(
              // TODO: Use tolerance instead?
@@ -77,18 +77,18 @@ void Cauchy
          ) 
          return F1(1)/F1(x[i]-y[j]);
       };
-    IndexDependentFill( A, std::function<F1(Int,Int)>(cauchyFill) );
+    IndexDependentFill( A, function<F1(Int,Int)>(cauchyFill) );
 }
 
 #define PROTO_TYPES(F1,F2) \
   template void Cauchy \
-  ( Matrix<F1>& A, const std::vector<F2>& x, const std::vector<F2>& y ); \
+  ( Matrix<F1>& A, const vector<F2>& x, const vector<F2>& y ); \
   template void Cauchy \
   ( AbstractDistMatrix<F1>& A, \
-    const std::vector<F2>& x, const std::vector<F2>& y ); \
+    const vector<F2>& x, const vector<F2>& y ); \
   template void Cauchy \
   ( AbstractBlockDistMatrix<F1>& A, \
-    const std::vector<F2>& x, const std::vector<F2>& y );
+    const vector<F2>& x, const vector<F2>& y );
 
 #define PROTO_REAL(F) \
   PROTO_TYPES(F,Int) \
@@ -100,6 +100,7 @@ void Cauchy
   PROTO_TYPES(F,F)
 
 #define EL_NO_INT_PROTO
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -14,33 +14,41 @@ namespace El {
 template<typename F>
 void MakeGaussian( Matrix<F>& A, F mean, Base<F> stddev )
 {
-    DEBUG_ONLY(CallStackEntry cse("MakeGaussian"))
+    DEBUG_ONLY(CSE cse("MakeGaussian"))
     auto sampleNormal = [=]() { return SampleNormal(mean,stddev); };
-    EntrywiseFill( A, std::function<F()>(sampleNormal) );
+    EntrywiseFill( A, function<F()>(sampleNormal) );
 }
 
 template<typename F>
 void MakeGaussian( AbstractDistMatrix<F>& A, F mean, Base<F> stddev )
 {
-    DEBUG_ONLY(CallStackEntry cse("MakeGaussian"))
+    DEBUG_ONLY(CSE cse("MakeGaussian"))
     if( A.RedundantRank() == 0 )
         MakeGaussian( A.Matrix(), mean, stddev );
-    A.BroadcastOver( A.RedundantComm(), 0 );
+    Broadcast( A, A.RedundantComm(), 0 );
 }
 
 template<typename F>
 void MakeGaussian( AbstractBlockDistMatrix<F>& A, F mean, Base<F> stddev )
 {
-    DEBUG_ONLY(CallStackEntry cse("MakeGaussian"))
+    DEBUG_ONLY(CSE cse("MakeGaussian"))
     if( A.RedundantRank() == 0 )
         MakeGaussian( A.Matrix(), mean, stddev );
-    A.BroadcastOver( A.RedundantComm(), 0 );
+    Broadcast( A, A.RedundantComm(), 0 );
+}
+
+template<typename F>
+void MakeGaussian( DistMultiVec<F>& A, F mean, Base<F> stddev )
+{
+    DEBUG_ONLY(CSE cse("MakeGaussian"))
+    auto sampleNormal = [=]() { return SampleNormal(mean,stddev); };
+    EntrywiseFill( A, function<F()>(sampleNormal) );
 }
 
 template<typename F>
 void Gaussian( Matrix<F>& A, Int m, Int n, F mean, Base<F> stddev )
 {
-    DEBUG_ONLY(CallStackEntry cse("Gaussian"))
+    DEBUG_ONLY(CSE cse("Gaussian"))
     A.Resize( m, n );
     MakeGaussian( A, mean, stddev );
 }
@@ -49,7 +57,7 @@ template<typename F>
 void Gaussian
 ( AbstractDistMatrix<F>& A, Int m, Int n, F mean, Base<F> stddev )
 {
-    DEBUG_ONLY(CallStackEntry cse("Gaussian"))
+    DEBUG_ONLY(CSE cse("Gaussian"))
     A.Resize( m, n );
     MakeGaussian( A, mean, stddev );
 }
@@ -58,7 +66,16 @@ template<typename F>
 void Gaussian
 ( AbstractBlockDistMatrix<F>& A, Int m, Int n, F mean, Base<F> stddev )
 {
-    DEBUG_ONLY(CallStackEntry cse("Gaussian"))
+    DEBUG_ONLY(CSE cse("Gaussian"))
+    A.Resize( m, n );
+    MakeGaussian( A, mean, stddev );
+}
+
+template<typename F>
+void Gaussian
+( DistMultiVec<F>& A, Int m, Int n, F mean, Base<F> stddev )
+{
+    DEBUG_ONLY(CSE cse("Gaussian"))
     A.Resize( m, n );
     MakeGaussian( A, mean, stddev );
 }
@@ -70,14 +87,19 @@ void Gaussian
   ( AbstractDistMatrix<F>& A, F mean, Base<F> stddev ); \
   template void MakeGaussian \
   ( AbstractBlockDistMatrix<F>& A, F mean, Base<F> stddev ); \
+  template void MakeGaussian \
+  ( DistMultiVec<F>& A, F mean, Base<F> stddev ); \
   template void Gaussian \
   ( Matrix<F>& A, Int m, Int n, F mean, Base<F> stddev ); \
   template void Gaussian \
   ( AbstractDistMatrix<F>& A, Int m, Int n, F mean, Base<F> stddev ); \
   template void Gaussian \
-  ( AbstractBlockDistMatrix<F>& A, Int m, Int n, F mean, Base<F> stddev );
+  ( AbstractBlockDistMatrix<F>& A, Int m, Int n, F mean, Base<F> stddev ); \
+  template void Gaussian \
+  ( DistMultiVec<F>& A, Int m, Int n, F mean, Base<F> stddev );
 
 #define EL_NO_INT_PROTO
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

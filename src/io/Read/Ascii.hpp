@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -15,9 +15,9 @@ namespace read {
 
 template<typename T>
 inline void
-Ascii( Matrix<T>& A, const std::string filename )
+Ascii( Matrix<T>& A, const string filename )
 {
-    DEBUG_ONLY(CallStackEntry cse("read::Ascii"))
+    DEBUG_ONLY(CSE cse("read::Ascii"))
     std::ifstream file( filename.c_str() );
     if( !file.is_open() )
         RuntimeError("Could not open ",filename);
@@ -25,7 +25,7 @@ Ascii( Matrix<T>& A, const std::string filename )
     // Walk through the file once to both count the number of rows and
     // columns and to ensure that the number of columns is consistent
     Int height=0, width=0;
-    std::string line;
+    string line;
     while( std::getline( file, line ) )
     {
         std::stringstream lineStream( line );
@@ -63,9 +63,9 @@ Ascii( Matrix<T>& A, const std::string filename )
 
 template<typename T>
 inline void
-Ascii( AbstractDistMatrix<T>& A, const std::string filename )
+Ascii( AbstractDistMatrix<T>& A, const string filename )
 {
-    DEBUG_ONLY(CallStackEntry cse("read::Ascii"))
+    DEBUG_ONLY(CSE cse("read::Ascii"))
     std::ifstream file( filename.c_str() );
     if( !file.is_open() )
         RuntimeError("Could not open ",filename);
@@ -73,7 +73,7 @@ Ascii( AbstractDistMatrix<T>& A, const std::string filename )
     // Walk through the file once to both count the number of rows and
     // columns and to ensure that the number of columns is consistent
     Int height=0, width=0;
-    std::string line;
+    string line;
     while( std::getline( file, line ) )
     {
         std::stringstream lineStream( line );
@@ -111,9 +111,9 @@ Ascii( AbstractDistMatrix<T>& A, const std::string filename )
 
 template<typename T>
 inline void
-Ascii( AbstractBlockDistMatrix<T>& A, const std::string filename )
+Ascii( AbstractBlockDistMatrix<T>& A, const string filename )
 {
-    DEBUG_ONLY(CallStackEntry cse("read::Ascii"))
+    DEBUG_ONLY(CSE cse("read::Ascii"))
     std::ifstream file( filename.c_str() );
     if( !file.is_open() )
         RuntimeError("Could not open ",filename);
@@ -121,7 +121,7 @@ Ascii( AbstractBlockDistMatrix<T>& A, const std::string filename )
     // Walk through the file once to both count the number of rows and
     // columns and to ensure that the number of columns is consistent
     Int height=0, width=0;
-    std::string line;
+    string line;
     while( std::getline( file, line ) )
     {
         std::stringstream lineStream( line );

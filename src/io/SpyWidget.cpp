@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -29,14 +29,14 @@ SpyWidget::~SpyWidget()
 
 void SpyWidget::paintEvent( QPaintEvent* event )
 {
-    DEBUG_ONLY(CallStackEntry cse("SpyWidget::paintEvent"))
+    DEBUG_ONLY(CSE cse("SpyWidget::paintEvent"))
     QStylePainter painter( this );
     painter.drawPixmap( 0, 0, pixmap_ );
 }
 
 void SpyWidget::Spy( const Matrix<Int>* A )
 {
-    DEBUG_ONLY(CallStackEntry cse("SpyWidget::Spy"))
+    DEBUG_ONLY(CSE cse("SpyWidget::Spy"))
     const Int m = A->Height();
     const Int n = A->Width();
 

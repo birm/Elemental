@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -11,52 +11,52 @@
 namespace El {
 
 template<typename S,typename T> 
-void Toeplitz( Matrix<S>& A, Int m, Int n, const std::vector<T>& a )
+void Toeplitz( Matrix<S>& A, Int m, Int n, const vector<T>& a )
 {
-    DEBUG_ONLY(CallStackEntry cse("Toeplitz"))
+    DEBUG_ONLY(CSE cse("Toeplitz"))
     const Int length = m+n-1;
     if( a.size() != Unsigned(length) )
         LogicError("a was the wrong size");
     A.Resize( m, n );
     auto toeplitzFill = [&]( Int i, Int j ) { return a[i-j+(n-1)]; };
-    IndexDependentFill( A, std::function<S(Int,Int)>(toeplitzFill) );
+    IndexDependentFill( A, function<S(Int,Int)>(toeplitzFill) );
 }
 
 template<typename S,typename T>
-void Toeplitz( AbstractDistMatrix<S>& A, Int m, Int n, const std::vector<T>& a )
+void Toeplitz( AbstractDistMatrix<S>& A, Int m, Int n, const vector<T>& a )
 {
-    DEBUG_ONLY(CallStackEntry cse("Toeplitz"))
+    DEBUG_ONLY(CSE cse("Toeplitz"))
     const Int length = m+n-1;
     if( a.size() != Unsigned(length) )
         LogicError("a was the wrong size");
     A.Resize( m, n );
     auto toeplitzFill = [&]( Int i, Int j ) { return a[i-j+(n-1)]; };
-    IndexDependentFill( A, std::function<S(Int,Int)>(toeplitzFill) );
+    IndexDependentFill( A, function<S(Int,Int)>(toeplitzFill) );
 }
 
 template<typename S,typename T>
 void Toeplitz
-( AbstractBlockDistMatrix<S>& A, Int m, Int n, const std::vector<T>& a )
+( AbstractBlockDistMatrix<S>& A, Int m, Int n, const vector<T>& a )
 {
-    DEBUG_ONLY(CallStackEntry cse("Toeplitz"))
+    DEBUG_ONLY(CSE cse("Toeplitz"))
     const Int length = m+n-1;
     if( a.size() != Unsigned(length) )
         LogicError("a was the wrong size");
     A.Resize( m, n );
     auto toeplitzFill = [&]( Int i, Int j ) { return a[i-j+(n-1)]; };
-    IndexDependentFill( A, std::function<S(Int,Int)>(toeplitzFill) );
+    IndexDependentFill( A, function<S(Int,Int)>(toeplitzFill) );
 }
 
 #define PROTO_TYPES(T1,T2) \
   template void Toeplitz \
   ( Matrix<T1>& A, \
-    const Int m, const Int n, const std::vector<T2>& a ); \
+    const Int m, const Int n, const vector<T2>& a ); \
   template void Toeplitz \
   ( AbstractDistMatrix<T1>& A, \
-    const Int m, const Int n, const std::vector<T2>& a ); \
+    const Int m, const Int n, const vector<T2>& a ); \
   template void Toeplitz \
   ( AbstractBlockDistMatrix<T1>& A, \
-    const Int m, const Int n, const std::vector<T2>& a );
+    const Int m, const Int n, const vector<T2>& a );
 
 #define PROTO_INT(T) PROTO_TYPES(T,T)
 
@@ -69,6 +69,7 @@ void Toeplitz
   PROTO_TYPES(T,Base<T>) \
   PROTO_TYPES(T,T)
 
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

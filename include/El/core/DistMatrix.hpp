@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -15,8 +15,8 @@ namespace El {
 struct DistData
 {
     Dist colDist, rowDist;
-    Int colAlign, rowAlign; 
-    Int root;  // relevant for [o ,o ]/[MD,* ]/[* ,MD]
+    int colAlign, rowAlign; 
+    int root;  // relevant for [o ,o ]/[MD,* ]/[* ,MD]
     const Grid* grid;
 
     DistData() { }
@@ -43,10 +43,12 @@ inline void AssertSameDist( const DistTypeA& distA, const DistTypeB& distB )
         RuntimeError("Matrices must have the same distribution");
 }
 
+template<typename T>
+class DistMultiVec;
+
 } // namespace El
 
 #include "./DistMatrix/Abstract.hpp"
-#include "./DistMatrix/General.hpp"
 #include "./DistMatrix/CIRC_CIRC.hpp"
 #include "./DistMatrix/MC_MR.hpp"
 #include "./DistMatrix/MC_STAR.hpp"
@@ -83,6 +85,27 @@ inline void AssertSameGrids
     if( A1.Grid() != A2.Grid() )
         LogicError("Grids did not match");
     AssertSameGrids( A2, args... );
+}
+
+template<typename T>
+inline void AssertSameDists( const AbstractDistMatrix<T>& A ) { }
+
+template<typename T>
+inline void AssertSameDists
+( const AbstractDistMatrix<T>& A1, const AbstractDistMatrix<T>& A2 ) 
+{
+    if( A1.ColDist() != A2.ColDist() || A1.RowDist() != A2.RowDist() )
+        LogicError("Distributions did not match");
+}
+
+template<typename T,typename... Args>
+inline void AssertSameDists
+( const AbstractDistMatrix<T>& A1, const AbstractDistMatrix<T>& A2,
+  Args&... args ) 
+{
+    if( A1.ColDist() != A2.ColDist() || A1.RowDist() != A2.RowDist() )
+        LogicError("Distributions did not match");
+    AssertSameDists( A2, args... );
 }
 
 } // namespace El

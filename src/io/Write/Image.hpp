@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -23,11 +23,11 @@ namespace write {
 #ifdef EL_HAVE_QT5
 inline void
 SaveQImage
-( const QImage& image, std::string basename="matrix", 
+( const QImage& image, string basename="matrix", 
   FileFormat format=PNG )
 {
-    DEBUG_ONLY(CallStackEntry cse("write::Image"))
-    std::string filename = basename + "." + FileExtension(format);
+    DEBUG_ONLY(CSE cse("write::Image"))
+    string filename = basename + "." + FileExtension(format);
     QFile file( filename.c_str() );
     file.open( QIODevice::WriteOnly );
     image.save( &file, QtImageFormat(format) );
@@ -37,9 +37,9 @@ SaveQImage
 template<typename T>
 inline void
 RealPartImage
-( const Matrix<T>& A, std::string basename="matrix", FileFormat format=PNG )
+( const Matrix<T>& A, string basename="matrix", FileFormat format=PNG )
 {
-    DEBUG_ONLY(CallStackEntry cse("write::RealPartImage"))
+    DEBUG_ONLY(CSE cse("write::RealPartImage"))
 #ifdef EL_HAVE_QT5
     typedef Base<T> Real;
     const Int m = A.Height();
@@ -54,8 +54,8 @@ RealPartImage
         {
             for( Int i=0; i<m; ++i )
             {
-                minVal = std::min( minVal, A.GetRealPart(i,j) );
-                maxVal = std::max( maxVal, A.GetRealPart(i,j) );
+                minVal = Min( minVal, A.GetRealPart(i,j) );
+                maxVal = Max( maxVal, A.GetRealPart(i,j) );
             }
         }
     }
@@ -86,9 +86,9 @@ RealPartImage
 template<typename T>
 inline void
 ImagPartImage
-( const Matrix<T>& A, std::string basename="matrix", FileFormat format=PNG )
+( const Matrix<T>& A, string basename="matrix", FileFormat format=PNG )
 {
-    DEBUG_ONLY(CallStackEntry cse("write::ImagPartImage"))
+    DEBUG_ONLY(CSE cse("write::ImagPartImage"))
 #ifdef EL_HAVE_QT5
     typedef Base<T> Real;
     const Int m = A.Height();
@@ -103,8 +103,8 @@ ImagPartImage
         {
             for( Int i=0; i<m; ++i )
             {
-                minVal = std::min( minVal, A.GetImagPart(i,j) );
-                maxVal = std::max( maxVal, A.GetImagPart(i,j) );
+                minVal = Min( minVal, A.GetImagPart(i,j) );
+                maxVal = Max( maxVal, A.GetImagPart(i,j) );
             }
         }
     }
@@ -135,19 +135,19 @@ ImagPartImage
 template<typename Real>
 inline void
 Image
-( const Matrix<Real>& A, std::string basename="matrix", FileFormat format=PNG )
+( const Matrix<Real>& A, string basename="matrix", FileFormat format=PNG )
 {
-    DEBUG_ONLY(CallStackEntry cse("write::Image"))
+    DEBUG_ONLY(CSE cse("write::Image"))
     RealPartImage( A, basename, format );
 }
 
 template<typename Real>
 inline void
 Image
-( const Matrix<Complex<Real>>& A, std::string basename="matrix", 
+( const Matrix<Complex<Real>>& A, string basename="matrix", 
   FileFormat format=PNG )
 {
-    DEBUG_ONLY(CallStackEntry cse("write::Image"))
+    DEBUG_ONLY(CSE cse("write::Image"))
     RealPartImage( A, basename+"_real", format );
     ImagPartImage( A, basename+"_imag", format );
 }

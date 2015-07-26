@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -13,28 +13,28 @@ namespace El {
 template<typename T> 
 void MinIJ( Matrix<T>& M, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("MinIJ"))
+    DEBUG_ONLY(CSE cse("MinIJ"))
     M.Resize( n, n );
     auto minIJFill = []( Int i, Int j ) { return T(Min(i+1,j+1)); };
-    IndexDependentFill( M, std::function<T(Int,Int)>(minIJFill) );
+    IndexDependentFill( M, function<T(Int,Int)>(minIJFill) );
 }
 
 template<typename T>
 void MinIJ( AbstractDistMatrix<T>& M, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("MinIJ"))
+    DEBUG_ONLY(CSE cse("MinIJ"))
     M.Resize( n, n );
     auto minIJFill = []( Int i, Int j ) { return T(Min(i+1,j+1)); };
-    IndexDependentFill( M, std::function<T(Int,Int)>(minIJFill) );
+    IndexDependentFill( M, function<T(Int,Int)>(minIJFill) );
 }
 
 template<typename T>
 void MinIJ( AbstractBlockDistMatrix<T>& M, Int n )
 {
-    DEBUG_ONLY(CallStackEntry cse("MinIJ"))
+    DEBUG_ONLY(CSE cse("MinIJ"))
     M.Resize( n, n );
     auto minIJFill = []( Int i, Int j ) { return T(Min(i+1,j+1)); };
-    IndexDependentFill( M, std::function<T(Int,Int)>(minIJFill) );
+    IndexDependentFill( M, function<T(Int,Int)>(minIJFill) );
 }
 
 #define PROTO(T) \
@@ -42,6 +42,7 @@ void MinIJ( AbstractBlockDistMatrix<T>& M, Int n )
   template void MinIJ( AbstractDistMatrix<T>& M, Int n ); \
   template void MinIJ( AbstractBlockDistMatrix<T>& M, Int n );
 
+#define EL_ENABLE_QUAD
 #include "El/macros/Instantiate.h"
 
 } // namespace El

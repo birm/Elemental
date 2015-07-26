@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -17,7 +17,7 @@ void HermitianFromEVD
 ( UpperOrLower uplo, Matrix<F>& A,
   const Matrix<Base<F>>& w, const Matrix<F>& Z )
 {
-    DEBUG_ONLY(CallStackEntry cse("HermitianFromEVD"))
+    DEBUG_ONLY(CSE cse("HermitianFromEVD"))
     Matrix<F> Z1Copy, Y1;
 
     const Int m = Z.Height();
@@ -31,8 +31,8 @@ void HermitianFromEVD
     for( Int k=0; k<n; k+=bsize )
     {
         const Int nb = Min(bsize,n-k);
-        auto Z1 = Z( IR(0,m),    IR(k,k+nb) );
-        auto w1 = w( IR(k,k+nb), IR(0,1)    );
+        auto Z1 = Z( ALL,        IR(k,k+nb) );
+        auto w1 = w( IR(k,k+nb), ALL        );
 
         Y1 = Z1Copy = Z1;
         DiagonalScale( RIGHT, NORMAL, w1, Y1 );
@@ -45,7 +45,7 @@ void HermitianFromEVD
 ( UpperOrLower uplo, AbstractDistMatrix<F>& APre,
   const AbstractDistMatrix<Base<F>>& wPre, const AbstractDistMatrix<F>& ZPre )
 {
-    DEBUG_ONLY(CallStackEntry cse("HermitianFromEVD"))
+    DEBUG_ONLY(CSE cse("HermitianFromEVD"))
     typedef Base<F> Real;
 
     auto APtr = WriteProxy<F,MC,MR>( &APre );     auto& A = *APtr;
@@ -56,7 +56,6 @@ void HermitianFromEVD
     DistMatrix<F,MC,  STAR> Z1_MC_STAR(g);
     DistMatrix<F,VR,  STAR> Z1_VR_STAR(g);
     DistMatrix<F,STAR,MR  > Z1Adj_STAR_MR(g);
-    DistMatrix<Real,STAR,STAR> w1_STAR_STAR(g);
 
     const Int m = Z.Height();
     const Int n = Z.Width();
@@ -69,19 +68,18 @@ void HermitianFromEVD
     for( Int k=0; k<n; k+=bsize )
     {
         const Int nb = Min(bsize,n-k);
-        auto Z1 = Z( IR(0,m),    IR(k,k+nb) );
-        auto w1 = w( IR(k,k+nb), IR(0,1)    );
+        auto Z1 = Z( ALL,        IR(k,k+nb) );
+        auto w1 = w( IR(k,k+nb), ALL        );
 
         Z1_MC_STAR.AlignWith( A );
         Z1_MC_STAR = Z1;
         Z1_VR_STAR.AlignWith( A );
         Z1_VR_STAR = Z1_MC_STAR;
-        w1_STAR_STAR = w1;
 
-        DiagonalScale( RIGHT, NORMAL, w1_STAR_STAR, Z1_VR_STAR );
+        DiagonalScale( RIGHT, NORMAL, w1, Z1_VR_STAR );
 
         Z1Adj_STAR_MR.AlignWith( A );
-        Z1_VR_STAR.AdjointPartialColAllGather( Z1Adj_STAR_MR );
+        Adjoint( Z1_VR_STAR, Z1Adj_STAR_MR );
         LocalTrrk( uplo, F(1), Z1_MC_STAR, Z1Adj_STAR_MR, F(1), A );
     }
 }

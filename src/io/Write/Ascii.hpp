@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -15,11 +15,11 @@ namespace write {
 
 template<typename T>
 inline void
-Ascii( const Matrix<T>& A, std::string basename="matrix", std::string title="" )
+Ascii( const Matrix<T>& A, string basename="matrix", string title="" )
 {
-    DEBUG_ONLY(CallStackEntry cse("write::Ascii"))
-    std::string filename = basename + "." + FileExtension(ASCII);
-    std::ofstream file( filename.c_str() );
+    DEBUG_ONLY(CSE cse("write::Ascii"))
+    string filename = basename + "." + FileExtension(ASCII);
+    ofstream file( filename.c_str() );
     if( !file.is_open() )
         RuntimeError("Could not open ",filename);
 

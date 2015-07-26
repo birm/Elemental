@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2009-2014, Jack Poulson
+   Copyright (c) 2009-2015, Jack Poulson
    All rights reserved.
 
    This file is part of Elemental and is under the BSD 2-Clause License, 
@@ -40,7 +40,38 @@ struct Range
     Range<T> operator-( T shift ) const 
     { return Range<T>(beg-shift,end-shift); }
 };
+
+static const Int END = -100;
+
+template<>
+struct Range<Int>
+{
+    Int beg, end;
+    Range() : beg(0), end(0) { }
+    Range( Int index ) : beg(index), end(index+1) { }
+    Range( Int begArg, Int endArg ) : beg(begArg), end(endArg) { }
+
+    Range<Int> operator+( Int shift ) const 
+    { 
+        if( end == END )
+            throw std::logic_error("Unsupported shift");
+        return Range<Int>(beg+shift,end+shift); 
+    }
+
+    Range<Int> operator-( Int shift ) const 
+    { 
+        if( end == END )
+            throw std::logic_error("Unsupported shift");
+        return Range<Int>(beg-shift,end-shift); 
+    }
+};
 typedef Range<Int> IR;
+
+static const IR ALL(0,END);
+
+template<typename T>
+inline bool operator==( const Range<T>& a, const Range<T>& b )
+{ return a.beg == b.beg && a.end == b.end; }
 
 template<typename Real>
 struct ValueInt
@@ -60,40 +91,55 @@ struct ValueInt<Complex<Real>>
     Complex<Real> value;
     Int index;
 
-    static bool Lesser( const ValueInt<Real>& a, const ValueInt<Real>& b )
-    { return Abs(a.value) < Abs(b.value); }
-    static bool Greater( const ValueInt<Real>& a, const ValueInt<Real>& b )
-    { return Abs(a.value) > Abs(b.value); }
+    static bool Lesser
+    ( const ValueInt<Complex<Real>>& a, const ValueInt<Complex<Real>>& b )
+    { 
+        return RealPart(a.value) < RealPart(b.value) ||
+               (RealPart(a.value) == RealPart(b.value) && 
+                ImagPart(a.value) < ImagPart(b.value));
+    }
+    static bool Greater
+    ( const ValueInt<Complex<Real>>& a, const ValueInt<Complex<Real>>& b )
+    {
+        return RealPart(a.value) > RealPart(b.value) ||
+               (RealPart(a.value) == RealPart(b.value) && 
+                ImagPart(a.value) > ImagPart(b.value));
+    }
 };
 
 template<typename Real>
-struct ValueIntPair
+struct Entry
 {
+    Int i, j;
     Real value;
-    Int indices[2];
-    
-    static bool Lesser( const ValueInt<Real>& a, const ValueInt<Real>& b )
+
+    static bool Lesser( const Entry<Real>& a, const Entry<Real>& b )
     { return a.value < b.value; }
-    static bool Greater( const ValueInt<Real>& a, const ValueInt<Real>& b )
+    static bool Greater( const Entry<Real>& a, const Entry<Real>& b )
     { return a.value > b.value; }
 };
 
 template<typename Real>
-struct ValueIntPair<Complex<Real>>
+struct Entry<Complex<Real>>
 {
+    Int i, j;
     Complex<Real> value;
-    Int indices[2];
     
     static bool Lesser
-    ( const ValueIntPair<Real>& a, const ValueIntPair<Real>& b )
-    { return Abs(a.value) < Abs(b.value); }
+    ( const Entry<Complex<Real>>& a, const Entry<Complex<Real>>& b )
+    { 
+        return RealPart(a.value) < RealPart(b.value) ||
+               (RealPart(a.value) == RealPart(b.value) && 
+                ImagPart(a.value) < ImagPart(b.value));
+    }
     static bool Greater
-    ( const ValueIntPair<Real>& a, const ValueIntPair<Real>& b )
-    { return Abs(a.value) > Abs(b.value); }
+    ( const Entry<Complex<Real>>& a, const Entry<Complex<Real>>& b )
+    {
+        return RealPart(a.value) > RealPart(b.value) ||
+               (RealPart(a.value) == RealPart(b.value) && 
+                ImagPart(a.value) > ImagPart(b.value));
+    }
 };
-
-template<typename F>
-using Entry = ValueIntPair<F>;
 
 // For the safe computation of products. The result is given by 
 //   product = rho * exp(kappa*n)
@@ -181,17 +227,21 @@ Dist StringToDist( std::string s );
 using namespace DistNS;
 typedef Dist Distribution;
 
-template<Dist U,Dist V>
-constexpr Dist DiagColDist() { return ( U==STAR ? V : U ); }
-template<Dist U,Dist V>
-constexpr Dist DiagRowDist() { return ( U==STAR ? U : V ); }
+// Return either the row or column piece of the implied diagonal distribution
+// ==========================================================================
 
-template<> constexpr Dist DiagColDist<MC,MR>() { return MD; }
-template<> constexpr Dist DiagRowDist<MC,MR>() { return STAR; }
-template<> constexpr Dist DiagColDist<MR,MC>() { return MD; }
-template<> constexpr Dist DiagRowDist<MR,MC>() { return STAR; }
+// Compile-time
+// ------------
+template<Dist U,Dist V> constexpr Dist DiagCol() { return ( U==STAR ? V : U ); }
+template<Dist U,Dist V> constexpr Dist DiagRow() { return ( U==STAR ? U : V ); }
+template<> constexpr Dist DiagCol<MC,MR>() { return MD; }
+template<> constexpr Dist DiagRow<MC,MR>() { return STAR; }
+template<> constexpr Dist DiagCol<MR,MC>() { return MD; }
+template<> constexpr Dist DiagRow<MR,MC>() { return STAR; }
 
-inline Dist DiagColDist( Dist U, Dist V )
+// Runtime
+// -------
+inline Dist DiagCol( Dist U, Dist V )
 { 
     if( U == MC && V == MR )
         return MD;
@@ -202,8 +252,7 @@ inline Dist DiagColDist( Dist U, Dist V )
     else
         return U;
 }
-
-inline Dist DiagRowDist( Dist U, Dist V )
+inline Dist DiagRow( Dist U, Dist V )
 {
     if( U == MC && V == MR )
         return STAR;
@@ -215,30 +264,42 @@ inline Dist DiagRowDist( Dist U, Dist V )
         return V;
 }
 
-template<Dist U,Dist V>
-constexpr Dist DiagInvColDist() { return ( U==STAR ? V : U ); }
-template<Dist U,Dist V>
-constexpr Dist DiagInvRowDist() { return ( U==STAR ? U : V ); }
-
-template<> constexpr Dist DiagInvColDist<MD,STAR>() { return MC; }
-template<> constexpr Dist DiagInvRowDist<MD,STAR>() { return MR; }
-template<> constexpr Dist DiagInvColDist<STAR,MD>() { return MC; }
-template<> constexpr Dist DiagInvRowDist<STAR,MD>() { return MR; }
+// Return a piece of a distribution which induces the given diagonal dist
+// ======================================================================
 
 // Compile-time
-template<Dist U> 
-constexpr Dist GatheredDist() { return ( U==CIRC ? CIRC : STAR ); }
+// ------------
+template<Dist U,Dist V>
+constexpr Dist DiagInvCol() { return ( U==STAR ? V : U ); }
+template<Dist U,Dist V>
+constexpr Dist DiagInvRow() { return ( U==STAR ? U : V ); }
+template<> constexpr Dist DiagInvCol<MD,STAR>() { return MC; }
+template<> constexpr Dist DiagInvRow<MD,STAR>() { return MR; }
+template<> constexpr Dist DiagInvCol<STAR,MD>() { return MC; }
+template<> constexpr Dist DiagInvRow<STAR,MD>() { return MR; }
 
-// Run-time
-inline Dist GatheredDist( Dist U ) { return ( U==CIRC ? CIRC : STAR ); }
+// TODO: Runtime version?
 
+// Union the distribution over its corresponding communicator
+// ==========================================================
 // Compile-time
-template<Dist U> constexpr Dist PartialDist() { return U; }
-template<> constexpr Dist PartialDist<VC>() { return MC; }
-template<> constexpr Dist PartialDist<VR>() { return MR; }
-
+// ------------
+template<Dist U> constexpr Dist Collect()       { return STAR; }
+template<>       constexpr Dist Collect<CIRC>() { return CIRC; }
 // Run-time
-inline Dist PartialDist( Dist U ) 
+// --------
+inline Dist Collect( Dist U ) { return ( U==CIRC ? CIRC : STAR ); }
+
+// Union the distribution over its corresponding partial communicator
+// ==================================================================
+// Compile-time
+// ------------
+template<Dist U> constexpr Dist Partial() { return U; }
+template<>       constexpr Dist Partial<VC>() { return MC; }
+template<>       constexpr Dist Partial<VR>() { return MR; }
+// Run-time
+// --------
+inline Dist Partial( Dist U ) 
 { 
     if( U == VC ) 
         return MC;
@@ -248,13 +309,17 @@ inline Dist PartialDist( Dist U )
         return U;
 }
 
+// Return the partial distribution that would be used for a partial union
+// ======================================================================
 // Compile-time
-template<Dist U,Dist V> constexpr Dist PartialUnionRowDist() { return V; }
-template<> constexpr Dist PartialUnionRowDist<VC,STAR>() { return MR; }
-template<> constexpr Dist PartialUnionRowDist<VR,STAR>() { return MC; }
-
+// ------------
+template<Dist U,Dist V> constexpr Dist PartialUnionRow()          { return V;  }
+template<>              constexpr Dist PartialUnionRow<VC,STAR>() { return MR; }
+template<>              constexpr Dist PartialUnionRow<VR,STAR>() { return MC; }template<Dist U,Dist V> constexpr Dist PartialUnionCol() 
+{ return PartialUnionRow<V,U>(); }
 // Run-time
-inline Dist PartialUnionRowDist( Dist U, Dist V )
+// --------
+inline Dist PartialUnionRow( Dist U, Dist V )
 { 
     if( U == VC )
         return MR;
@@ -263,14 +328,47 @@ inline Dist PartialUnionRowDist( Dist U, Dist V )
     else
         return V;
 }
+inline Dist PartialUnionCol( Dist U, Dist V )
+{ return PartialUnionRow( V, U ); }
 
+// Return the product of two distributions
+// =======================================
 // Compile-time
-template<Dist U,Dist V> constexpr Dist PartialUnionColDist() 
-{ return PartialUnionRowDist<V,U>(); }
-
-// Run-time
-inline Dist PartialUnionColDist( Dist U, Dist V )
-{ return PartialUnionRowDist( V, U ); }
+// ------------
+template<Dist U,Dist V> constexpr Dist ProductDist() { return CIRC; }
+template<>              constexpr Dist ProductDist<MC,  MR  >() { return VC;   }
+template<>              constexpr Dist ProductDist<MC,  STAR>() { return MC;   }
+template<>              constexpr Dist ProductDist<MD,  STAR>() { return MD;   }
+template<>              constexpr Dist ProductDist<MR,  MC  >() { return VR;   }
+template<>              constexpr Dist ProductDist<MR,  STAR>() { return MR;   }
+template<>              constexpr Dist ProductDist<STAR,MC  >() { return MC;   }
+template<>              constexpr Dist ProductDist<STAR,MD  >() { return MD;   }
+template<>              constexpr Dist ProductDist<STAR,MR  >() { return MR;   }
+template<>              constexpr Dist ProductDist<STAR,STAR>() { return STAR; }
+template<>              constexpr Dist ProductDist<STAR,VC  >() { return VC;   }
+template<>              constexpr Dist ProductDist<STAR,VR  >() { return VR;   }
+template<>              constexpr Dist ProductDist<VC,  STAR>() { return VC;   }
+template<>              constexpr Dist ProductDist<VR,  STAR>() { return VR;   }
+template<Dist U,Dist V> 
+constexpr Dist ProductDistPartner() { return STAR; }
+template<> 
+constexpr Dist ProductDistPartner<CIRC,CIRC>() { return CIRC; }
+// Runtime
+// -------
+inline Dist ProductDist( Dist U, Dist V )
+{
+    if(      U == STAR ) return V;
+    else if( V == STAR ) return U;
+    else if( U == MC   && V == MR   ) return VC;
+    else if( U == MR   && V == MC   ) return VR;
+    else if( U == CIRC && V == CIRC ) return CIRC;
+    else { return STAR; } // NOTE: This branch should not be possible
+}
+inline Dist ProductDistPartner( Dist U, Dist V )
+{
+    if( U == CIRC && V == CIRC ) return CIRC;
+    else                         return STAR;
+}
 
 namespace ViewTypeNS {
 enum ViewType
